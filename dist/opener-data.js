@@ -47,6 +47,103 @@
         "Turn T upside down and kick it into the left cavity for the T-Spin Double.",
         "Use the next bag's T vertically in the revealed cavity for the T-Spin Triple."
       ]
+    },
+    pco: {
+      variant: "Perfect Clear Opener · fixed first-bag form",
+      verified: true,
+      sequence: "ILOJSTZ",
+      plan: [[6,1,18],[7,0,20],[7,0,19],[7,2,17],[1,0,20],[0,1,19],[0,0,18]],
+      steps: [
+        "Stand I in column 7; this keeps the entire setup inside four rows.",
+        "Lay L along the bottom-right edge.",
+        "Set O directly above the L foot.",
+        "Turn J upside down across the top-right shelf.",
+        "Lay S across columns 2–4 on the floor.",
+        "Stand T against the left wall to shape the compact side.",
+        "Lay Z across the top-left. The first-bag PCO rectangle is ready for a second-bag solve."
+      ]
+    },
+    dpc: {
+      variant: "DPC prerequisite · extra-piece orientation drill",
+      verified: true,
+      sequence: "ILOJSTZ",
+      plan: [[6,1,18],[7,0,20],[7,0,19],[7,2,17],[1,0,20],[0,1,19],[0,0,18]],
+      steps: [
+        "DPC begins after an 8-height perfect clear; this short drill first teaches the compact four-row base.",
+        "Lay L on the right without increasing the four-row ceiling.",
+        "Nest O over the L foot.",
+        "Turn J across the upper-right edge.",
+        "Keep S low on the left.",
+        "Stand T at the wall; in a real DPC cycle the leftover piece determines which branch follows.",
+        "Close the base with Z. This is the orientation prerequisite, not a claim that one fixed DPC solve covers every leftover piece."
+      ]
+    },
+    gamushiro: {
+      variant: "Gamushiro · fixed first-bag foundation",
+      verified: true,
+      sequence: "IJOLSTZ",
+      plan: [[7,1,18],[0,0,20],[8,0,20],[8,1,17],[0,1,18],[5,3,19],[3,0,20]],
+      steps: [
+        "Stand I in column 8.", "Lay J in the bottom-left corner.", "Set O against the right wall.",
+        "Stand L over I and O at the right edge.", "Stand S on the left to form the rising side.",
+        "Turn T counter-clockwise beside the I column.", "Lay Z in the centre to finish the fixed Gamushiro first bag."
+      ]
+    },
+    hachispin: {
+      variant: "Hachispin · fixed TSS foundation",
+      verified: true,
+      sequence: "ILJOSTZ",
+      plan: [[0,1,18],[1,2,19],[2,2,18],[5,0,20],[7,0,20],[6,2,18],[5,1,17]],
+      steps: [
+        "Stand I at the left wall.", "Turn L upside down along the lower-left shelf.",
+        "Turn J upside down above the L.", "Set O in the centre.", "Lay S on the right.",
+        "Turn T upside down across the right-centre shelf.", "Stand Z above the centre to finish the recognizable Hachispin first bag."
+      ]
+    },
+    mko: {
+      variant: "MKO · fixed TSD route",
+      verified: true,
+      sequence: "IJLOSZT",
+      plan: [[9,1,16],[0,0,18],[4,0,18],[7,0,18],[0,1,16],[5,1,16],[2,2,17]],
+      steps: [
+        "Stand I at the right wall.", "Lay J in the bottom-left.", "Lay L across the centre.",
+        "Set O beside L.", "Stand S at the left wall.", "Stand Z above L to make the overhang.",
+        "Turn T upside down and rotate it into the centre-left cavity for the T-Spin Double."
+      ]
+    },
+    albatross: {
+      variant: "Albatross Special · fixed TSD route",
+      verified: true,
+      sequence: "IJLOSZT",
+      plan: [[9,1,16],[6,2,16],[5,2,17],[3,0,18],[0,1,17],[3,0,16],[1,2,16]],
+      steps: [
+        "Stand I at the right wall.", "Turn J upside down across the upper-right.",
+        "Turn L upside down beneath J.", "Set O in the centre-left.", "Stand S at the left wall.",
+        "Lay Z over O to form the Albatross overhang.", "Turn T upside down into the left cavity for the T-Spin Double."
+      ]
+    },
+    "st-stack": {
+      variant: "ST/LST notch-spacing foundation",
+      verified: true,
+      sequence: "IJLOTZS",
+      plan: [[9,1,15],[3,3,17],[0,1,17],[5,0,18],[7,0,18],[7,1,16],[5,0,16]],
+      steps: [
+        "Stand I at the right wall to mark the outside lane.", "Stand J in the centre-left.",
+        "Stand L at the left wall.", "Set O between J and the right lane.", "Lay T on the lower-right shelf.",
+        "Stand Z above the T side.", "Lay S across the centre. Notice the two-row notch spacing used by repeating ST-family stacks."
+      ]
+    },
+    "6-3": {
+      variant: "6–3 clean-stacking first bag",
+      verified: true,
+      sequence: "IJLOSTZ",
+      plan: [[0,0,20],[0,0,19],[7,0,20],[4,0,20],[0,1,17],[2,2,18],[1,0,17]],
+      steps: [
+        "Lay I across the six-column side.", "Lay J above its left end.",
+        "Put L on the three-column side; keep column 7 open as the separating well.", "Set O at the right edge of the six-column side.",
+        "Stand S along the left wall.", "Turn T upside down across the centre-left.",
+        "Lay Z over the T. The bag stays hole-free while preserving the 6–3 split."
+      ]
     }
   };
 });

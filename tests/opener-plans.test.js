@@ -147,3 +147,43 @@ test("DT Cannon completes its TSD and revealed TST", () => {
     "___LZZS__I"
   ]);
 });
+
+test("every selectable Tetris lesson has a complete reachable route", () => {
+  for (const [id, opener] of Object.entries(openers)) {
+    assert.equal(opener.sequence.length, opener.plan.length, `${id} must define one target per piece`);
+    assert.equal(opener.steps.length, opener.plan.length, `${id} must explain every target`);
+    let board = emptyBoard();
+    for (let index = 0; index < opener.sequence.length; index++) {
+      const type = opener.sequence[index];
+      const [left, rotation, fixedY] = opener.plan[index];
+      const minX = Math.min(...shape(type,rotation).map(([x]) => x));
+      const target = { x: left - minX, y: Number.isInteger(fixedY) ? fixedY : 0, rotation };
+      if (!Number.isInteger(fixedY)) {
+        const coords = shape(type,rotation);
+        const collides = y => coords.some(([sx,sy]) => {
+          const x = target.x + sx, py = y + sy;
+          return x < 0 || x >= 10 || py >= 22 || (py >= 0 && board[py][x]);
+        });
+        while (!collides(target.y + 1)) target.y++;
+      }
+      assert.equal(canReach(board,type,target),true,`${id} step ${index+1} (${type}) must be SRS-reachable`);
+      board = place(board,type,left,rotation,true,fixedY).board;
+    }
+  }
+});
+
+test("MKO and Albatross fixed routes finish with a two-line clear", () => {
+  assert.equal(build(openers.mko).cleared,2);
+  assert.equal(build(openers.albatross).cleared,2);
+});
+
+test("6–3 clean-stacking drill remains hole-free", () => {
+  const { board } = build(openers["6-3"]);
+  for (let x = 0; x < 10; x++) {
+    let occupied = false;
+    for (let y = 0; y < 22; y++) {
+      if (board[y][x]) occupied = true;
+      else if (occupied) assert.fail(`6–3 leaves a covered hole in column ${x+1}`);
+    }
+  }
+});

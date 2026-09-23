@@ -20,17 +20,6 @@
   const { BASE_SHAPES, shape, kicksFor, samePlacement } = window.StackLabTetrisRules;
   const verifiedOpeners = window.StackLabOpeners;
 
-  const PLAN_LIBRARY = {
-    pco: [[0,0],[2,0],[7,0],[5,0],[2,0],[4,0],[7,0]],
-    dpc: [[3,2],[0,1],[2,0],[7,1],[5,0],[6,0],[8,0]],
-    gamushiro: [[0,0],[7,0],[4,0],[0,0],[7,0],[3,0],[3,0]],
-    hachispin: [[3,2],[0,0],[7,0],[4,0],[0,1],[6,0],[1,0]],
-    "st-stack": [[0,0],[7,0],[4,0],[0,0],[4,1],[7,0],[2,0]],
-    albatross: [[0,0],[7,0],[1,0],[6,0],[3,0],[3,0],[5,0]],
-    mko: [[0,0],[7,0],[3,0],[5,0],[0,1],[4,0],[4,0]],
-    "6-3": [[9,1],[0,0],[3,0],[6,0],[0,0],[4,0],[6,0]]
-  };
-
   const PUYO_PLANS = {
     gtr: [[0,1],[1,0],[2,1],[0,0],[1,1],[3,0],[2,0],[4,1]],
     stairs: [[0,0],[1,0],[1,1],[2,0],[2,1],[3,0],[3,1],[4,0]],
@@ -176,7 +165,7 @@
         if (state.step >= activeLesson().sequence.length) {
           state.completed = true;
           t.active = null;
-          showToast(activeLesson().id === "dt-cannon" ? "TSD + TST complete!" : "T-spin lesson complete!");
+          showToast(`${activeLesson().name} complete!`);
           updateUI();
           return;
         }
@@ -220,7 +209,7 @@
 
   function lessonTetrisTarget(beforeLock = false) {
     const lesson = activeLesson();
-    const plan = verifiedOpeners[lesson.id]?.plan || PLAN_LIBRARY[lesson.id] || PLAN_LIBRARY.pco;
+    const plan = verifiedOpeners[lesson.id]?.plan || verifiedOpeners.tki.plan;
     const index = Math.min(state.step, plan.length - 1);
     const type = beforeLock ? state.tetris.active.type : (lesson.sequence[index] || state.tetris.active.type);
     const [xRaw, rotation, fixedY] = plan[index];
@@ -487,8 +476,8 @@
       $("#coachState").textContent = "COMPLETE";
       $("#coachState").style.color = "#63e59b";
       $("#instructionKicker").textContent = "LESSON COMPLETE";
-      $("#instructionTitle").textContent = lesson.id === "dt-cannon" ? "TSD + TST complete" : "First-bag T-spin complete";
-      $("#instructionText").textContent = lesson.id === "dt-cannon" ? "You built the cannon, cleared the T-Spin Double, and finished the T-Spin Triple." : "You completed the guided TKI bag and its T-Spin Double.";
+      $("#instructionTitle").textContent = `${lesson.name} complete`;
+      $("#instructionText").textContent = lesson.id === "dt-cannon" ? "You built the cannon, cleared the T-Spin Double, and finished the T-Spin Triple." : `You completed the full guided ${lesson.name} sequence.`;
       $("#placementText").textContent = "Restart the lesson to practise it again";
       $("#whyText").textContent = lesson.focus;
       return;
@@ -532,7 +521,7 @@
     $("#pauseOverlay").classList.toggle("visible",overlayVisible);
     $("#pauseOverlay").setAttribute("aria-hidden",String(!overlayVisible));
     $("#overlayTitle").textContent = state.completed ? "LESSON COMPLETE" : "PAUSED";
-    $("#overlayText").textContent = state.completed ? (activeLesson().id === "dt-cannon" ? "TSD + TST finished" : "First-bag T-spin finished") : "The board stays visible";
+    $("#overlayText").textContent = state.completed ? `${activeLesson().name} sequence finished` : "The board stays visible";
     $("#overlayKey").textContent = state.completed ? "RESTART TO PRACTISE AGAIN" : "ENTER TO CONTINUE";
     $("#pauseButton").disabled = state.completed;
     $("#pauseButton").firstChild.textContent = state.paused ? "▶" : "Ⅱ";
