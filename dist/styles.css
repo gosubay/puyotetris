@@ -1,0 +1,195 @@
+:root {
+  color-scheme: dark;
+  --ink: #07111b;
+  --panel: #0d1c29;
+  --panel-2: #102638;
+  --line: rgba(151, 207, 229, .16);
+  --muted: #85a5b8;
+  --text: #f4fbff;
+  --cyan: #4fe0ff;
+  --cyan-2: #1ba5d4;
+  --yellow: #ffd45e;
+  --pink: #ff4d7d;
+  --green: #63e59b;
+  --shadow: 0 30px 80px rgba(0, 0, 0, .38);
+}
+
+* { box-sizing: border-box; }
+
+html, body { min-height: 100%; }
+
+body {
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 50% 12%, rgba(24, 141, 179, .18), transparent 30rem),
+    linear-gradient(135deg, #07121d, #091925 48%, #06111a);
+  font: 16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-width: 320px;
+}
+
+button, select { font: inherit; }
+button, select, canvas { -webkit-tap-highlight-color: transparent; }
+button { color: inherit; }
+
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+
+.topbar {
+  height: 76px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 28px;
+  padding: 0 32px;
+  background: rgba(6, 17, 26, .9);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand { color: white; text-decoration: none; display: flex; align-items: center; gap: 12px; font-weight: 900; letter-spacing: .13em; }
+.brand-mark { width: 32px; height: 30px; position: relative; display: inline-block; }
+.brand-mark i { position: absolute; width: 13px; height: 13px; border-radius: 3px; background: var(--cyan); box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); }
+.brand-mark i:nth-child(1) { left: 0; top: 0; }
+.brand-mark i:nth-child(2) { left: 14px; top: 0; background: var(--pink); }
+.brand-mark i:nth-child(3) { left: 14px; top: 14px; background: var(--yellow); }
+
+.game-switch, .segmented { display: flex; background: #07131d; border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+.game-tab, .mode-button { border: 0; background: transparent; color: var(--muted); font-weight: 800; letter-spacing: .08em; cursor: pointer; border-radius: 8px; }
+.game-tab { padding: 10px 28px; }
+.game-tab.active, .mode-button.active { color: #07131d; background: var(--cyan); box-shadow: 0 4px 18px rgba(79,224,255,.22); }
+.game-tab[data-game="puyo"].active { color: white; background: var(--pink); box-shadow: 0 4px 18px rgba(255,77,125,.22); }
+
+.header-actions { justify-self: end; display: flex; gap: 10px; align-items: center; }
+.icon-button, .pause-button { height: 42px; border: 1px solid var(--line); background: #0c1d2a; border-radius: 10px; cursor: pointer; }
+.icon-button { width: 42px; display: grid; place-items: center; }
+.icon-button svg { width: 20px; fill: #9fc5d7; }
+.pause-button { padding: 0 12px; font-size: .78rem; font-weight: 800; letter-spacing: .08em; }
+.pause-button > span { color: var(--yellow); margin-right: 5px; }
+kbd { font: 700 .7rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; color: #cce6f0; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13); border-bottom-width: 2px; border-radius: 5px; padding: 4px 6px; }
+
+.trainer-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(250px, 320px) minmax(500px, 1fr) minmax(280px, 350px);
+  min-height: calc(100vh - 76px);
+}
+
+.lesson-panel, .coach-panel { padding: 30px 26px; background: rgba(9, 24, 35, .84); }
+.lesson-panel { border-right: 1px solid var(--line); }
+.coach-panel { border-left: 1px solid var(--line); }
+.eyebrow, .field-group label, .lesson-type, .condition-box span, .speed-card span, .coach-heading span, .piece-callout span, .instruction-kicker, .why-card > span, .rail-label {
+  color: var(--muted); font-size: .7rem; font-weight: 900; letter-spacing: .14em;
+}
+.segmented { margin-top: 10px; }
+.mode-button { flex: 1; padding: 9px 8px; letter-spacing: .02em; font-size: .84rem; }
+.field-group { margin-top: 24px; }
+.field-group label { display: block; margin-bottom: 8px; }
+select { color: var(--text); background: #0b1c29; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; }
+.field-group select { width: 100%; }
+
+.lesson-card { position: relative; margin-top: 16px; padding: 20px; border: 1px solid rgba(79,224,255,.25); background: linear-gradient(145deg, rgba(24,80,102,.37), rgba(11,26,38,.8)); border-radius: 14px; overflow: hidden; }
+.lesson-card::after { content: ""; position: absolute; right: -55px; top: -55px; width: 135px; height: 135px; border: 26px solid rgba(79,224,255,.05); transform: rotate(20deg); }
+.lesson-card > div:first-of-type:not(.lesson-number) { position: relative; z-index: 1; }
+.lesson-number { float: right; color: rgba(79,224,255,.15); font-size: 3.6rem; font-weight: 950; line-height: .85; letter-spacing: -.08em; }
+.lesson-type { margin: 0; color: var(--cyan); }
+.lesson-card h1 { margin: 3px 0 14px; font-size: 1.7rem; letter-spacing: -.04em; }
+.lesson-card > p:not(.lesson-type) { clear: both; color: #c3d9e3; font-size: .9rem; }
+.condition-box { margin-top: 16px; padding: 12px; background: rgba(0,0,0,.22); border-left: 3px solid var(--yellow); border-radius: 4px 8px 8px 4px; }
+.condition-box span, .condition-box strong { display: block; }
+.condition-box strong { margin-top: 4px; font-size: .84rem; }
+.speed-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.speed-card span, .speed-card strong { display: block; }
+.speed-card strong { font-size: .82rem; margin-top: 3px; }
+.speed-card select { width: 108px; font-size: .78rem; padding: 8px; }
+.restart-button { margin-top: 12px; width: 100%; padding: 10px; border: 1px solid var(--line); background: transparent; border-radius: 9px; cursor: pointer; color: #b9d3df; }
+
+.play-zone { padding: 24px 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; }
+.board-topline { width: min(100%, 570px); display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .13em; }
+.board-topline > span:last-child { display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 7px; height: 7px; display: inline-block; background: var(--green); border-radius: 99px; box-shadow: 0 0 12px var(--green); }
+.board-stage { display: grid; grid-template-columns: 102px minmax(260px, 360px) 102px; align-items: start; gap: 12px; }
+.canvas-wrap { position: relative; border: 2px solid rgba(79,224,255,.5); border-radius: 10px; overflow: hidden; background: #08121b; box-shadow: var(--shadow), 0 0 40px rgba(79,224,255,.09); }
+#gameCanvas { display: block; width: 100%; height: auto; outline: 0; }
+.hold-rail, .next-rail { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px; background: rgba(13,31,44,.72); border: 1px solid var(--line); border-radius: 10px; }
+.hold-rail canvas, .next-rail canvas { width: 100%; height: auto; }
+.rail-label { color: #c8e6f3; }
+.board-actions { display: flex; gap: 10px; margin-top: 16px; }
+.board-actions button { border-radius: 9px; padding: 11px 16px; font-weight: 800; cursor: pointer; }
+.hint-button { color: #07131d; background: var(--cyan); border: 0; box-shadow: 0 8px 24px rgba(79,224,255,.2); }
+.hint-button span { margin-right: 5px; }
+.hint-button kbd { color: #0a2835; background: rgba(0,0,0,.1); border-color: rgba(0,0,0,.15); }
+.undo-button { background: #0e2130; border: 1px solid var(--line); }
+.undo-button:disabled { opacity: .38; cursor: not-allowed; }
+
+.pause-overlay { position: absolute; inset: 0; z-index: 3; display: none; place-content: center; justify-items: center; gap: 8px; background: rgba(4,13,20,.62); backdrop-filter: blur(3px); }
+.pause-overlay.visible { display: grid; }
+.pause-overlay strong { font-size: 2rem; letter-spacing: .14em; }
+.pause-overlay span { color: #bad1dc; }
+.pause-overlay kbd { margin-top: 12px; color: var(--yellow); }
+.toast { position: absolute; left: 50%; bottom: 16px; z-index: 4; transform: translate(-50%, 10px); opacity: 0; pointer-events: none; background: #f4fbff; color: #07131d; border-radius: 8px; padding: 9px 14px; font-weight: 800; font-size: .82rem; white-space: nowrap; transition: .2s ease; }
+.toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+.coach-heading { display: flex; align-items: center; gap: 11px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.coach-heading span, .coach-heading strong { display: block; }
+.coach-heading strong { margin-top: 2px; color: var(--green); font-size: .82rem; letter-spacing: .1em; }
+.coach-orb { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 99px; color: #06131c; background: var(--cyan); font-size: 1.2rem; box-shadow: 0 0 24px rgba(79,224,255,.25); }
+.piece-callout { display: flex; gap: 14px; align-items: center; padding: 18px 0; }
+.piece-callout canvas { background: rgba(0,0,0,.18); border: 1px solid var(--line); border-radius: 8px; }
+.piece-callout span, .piece-callout strong { display: block; }
+.piece-callout strong { margin-top: 4px; font-size: .88rem; }
+.instruction-card { padding: 18px; background: linear-gradient(145deg, rgba(27,165,212,.16), rgba(11,28,41,.7)); border: 1px solid rgba(79,224,255,.24); border-radius: 14px; }
+.instruction-kicker { color: var(--cyan); }
+.instruction-card h2 { margin: 8px 0; font-size: 1.25rem; line-height: 1.2; }
+.instruction-card p, .why-card p { color: #b7d0dc; font-size: .9rem; }
+.placement-chip { display: flex; align-items: center; gap: 8px; margin-top: 15px; color: #d8eff8; font-size: .78rem; font-weight: 700; }
+.mini-ghost { width: 22px; height: 15px; border: 2px dashed var(--cyan); border-radius: 3px; }
+.why-card { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.why-card p { margin-bottom: 0; }
+.coach-tip { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; color: var(--muted); font-size: .82rem; }
+
+dialog { color: var(--text); background: transparent; border: 0; padding: 0; }
+dialog::backdrop { background: rgba(2,8,13,.76); backdrop-filter: blur(5px); }
+.settings-card { width: min(92vw, 560px); background: #0b1d2a; border: 1px solid rgba(79,224,255,.25); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); }
+.dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; }
+.dialog-heading span { color: var(--cyan); font-size: .7rem; font-weight: 900; letter-spacing: .14em; }
+.dialog-heading h2 { margin: 3px 0 0; }
+.dialog-heading button { border: 0; background: transparent; font-size: 1.8rem; cursor: pointer; }
+.settings-card > p { color: var(--muted); }
+.key-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.key-row { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; }
+.key-row button { min-width: 94px; border: 1px solid var(--line); border-radius: 7px; padding: 7px; background: #10293b; cursor: pointer; }
+.key-row button.listening { border-color: var(--yellow); color: var(--yellow); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.dialog-actions button { border: 1px solid var(--line); border-radius: 8px; background: transparent; padding: 9px 16px; cursor: pointer; }
+.dialog-actions .primary { color: #07131d; background: var(--cyan); border-color: var(--cyan); font-weight: 800; }
+
+@media (max-width: 1120px) {
+  .trainer-layout { grid-template-columns: 250px minmax(470px, 1fr); }
+  .coach-panel { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 180px 1fr 1fr; gap: 16px; }
+  .coach-heading { align-self: start; border: 0; }
+  .piece-callout { display: none; }
+  .instruction-card, .why-card { margin: 0; }
+  .coach-tip { display: none; }
+}
+
+@media (max-width: 780px) {
+  .topbar { height: auto; min-height: 70px; grid-template-columns: 1fr auto; padding: 12px 16px; }
+  .game-switch { grid-row: 2; grid-column: 1 / -1; }
+  .game-tab { flex: 1; padding: 8px 18px; }
+  .pause-button { font-size: 0; }
+  .pause-button > span, .pause-button kbd { font-size: .7rem; }
+  .trainer-layout { display: flex; flex-direction: column; }
+  .lesson-panel { border-right: 0; border-bottom: 1px solid var(--line); padding: 20px 16px; }
+  .lesson-card { display: none; }
+  .field-group { margin-top: 14px; }
+  .speed-card { margin-top: 10px; }
+  .play-zone { padding: 18px 10px 24px; order: 2; overflow: hidden; }
+  .board-stage { width: min(100%, 500px); grid-template-columns: 70px minmax(215px, 1fr) 70px; gap: 6px; }
+  .hold-rail, .next-rail { padding: 8px 4px; }
+  .coach-panel { order: 3; grid-template-columns: 1fr; padding: 22px 16px; }
+  .coach-heading { display: none; }
+  .key-grid { grid-template-columns: 1fr; }
+}
