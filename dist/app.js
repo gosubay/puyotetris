@@ -517,12 +517,15 @@
     $("#holdKey").textContent = displayKey(state.keys.hold);
     $("#hintButton").classList.toggle("active",state.showHint);
     $("#hintButtonLabel").textContent = state.showHint ? "Hide guide" : "Show guide";
-    const overlayVisible = state.paused || state.completed;
+    // Pausing freezes play without covering or softening the board. The header
+    // button is the only pause-state indicator; the overlay is reserved for a
+    // completed lesson.
+    const overlayVisible = state.completed;
     $("#pauseOverlay").classList.toggle("visible",overlayVisible);
     $("#pauseOverlay").setAttribute("aria-hidden",String(!overlayVisible));
-    $("#overlayTitle").textContent = state.completed ? "LESSON COMPLETE" : "PAUSED";
-    $("#overlayText").textContent = state.completed ? `${activeLesson().name} sequence finished` : "The board stays visible";
-    $("#overlayKey").textContent = state.completed ? "RESTART TO PRACTISE AGAIN" : "ENTER TO CONTINUE";
+    $("#overlayTitle").textContent = "LESSON COMPLETE";
+    $("#overlayText").textContent = `${activeLesson().name} sequence finished`;
+    $("#overlayKey").textContent = "RESTART TO PRACTISE AGAIN";
     $("#pauseButton").disabled = state.completed;
     $("#pauseButton").firstChild.textContent = state.paused ? "▶" : "Ⅱ";
   }

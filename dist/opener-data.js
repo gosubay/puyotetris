@@ -90,14 +90,15 @@
       ]
     },
     hachispin: {
-      variant: "Hachispin · fixed TSS foundation",
+      variant: "Hachispin · fixed T-Spin Single",
       verified: true,
-      sequence: "ILJOSTZ",
-      plan: [[0,1,18],[1,2,19],[2,2,18],[5,0,20],[7,0,20],[6,2,18],[5,1,17]],
+      sequence: "ILJOSZT",
+      plan: [[0,1,18],[1,2,19],[2,2,18],[5,0,20],[7,0,20],[5,1,17],[6,2,18]],
       steps: [
         "Stand I at the left wall.", "Turn L upside down along the lower-left shelf.",
         "Turn J upside down above the L.", "Set O in the centre.", "Lay S on the right.",
-        "Turn T upside down across the right-centre shelf.", "Stand Z above the centre to finish the recognizable Hachispin first bag."
+        "Stand Z above the centre to close the overhang.",
+        "Turn T upside down and rotate it into the right-side cavity for the T-Spin Single."
       ]
     },
     mko: {

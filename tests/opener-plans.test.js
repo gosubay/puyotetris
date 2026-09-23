@@ -177,6 +177,13 @@ test("MKO and Albatross fixed routes finish with a two-line clear", () => {
   assert.equal(build(openers.albatross).cleared,2);
 });
 
+test("Hachispin places Z second-last and spins the final T for a Single", () => {
+  const opener = openers.hachispin;
+  assert.equal(opener.sequence.slice(-2),"ZT");
+  assert.equal(build(opener,opener.sequence.length-1).cleared,0);
+  assert.equal(build(opener).cleared,1);
+});
+
 test("6–3 clean-stacking drill remains hole-free", () => {
   const { board } = build(openers["6-3"]);
   for (let x = 0; x < 10; x++) {
