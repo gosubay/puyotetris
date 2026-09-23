@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { shape, kicksFor } = require("../dist/tetris-rules.js");
+const { shape, kicksFor, samePlacement } = require("../dist/tetris-rules.js");
 const openers = require("../dist/opener-data.js");
 
 function emptyBoard() {
@@ -79,11 +79,17 @@ test("TKI-3 first six pieces form the canonical cavity", () => {
   const { board, cleared } = build(openers.tki, 6);
   assert.equal(cleared, 0);
   assert.deepEqual(occupiedRows(board), [
-    "___JJJ____",
-    "L__ZZJS___",
+    "_______J__",
+    "L__ZZ_SJJJ",
     "L___ZZSSOO",
     "LL_IIIISOO"
   ]);
+});
+
+test("S placement accepts the equivalent counter-clockwise rotation state", () => {
+  const clockwiseTarget = { type: "S", x: 5, y: 19, rotation: 1 };
+  const counterClockwisePlacement = { type: "S", x: 6, y: 19, rotation: 3 };
+  assert.equal(samePlacement(clockwiseTarget,counterClockwisePlacement),true);
 });
 
 test("TKI-3 final T completes a two-line clear", () => {

@@ -7,17 +7,17 @@
 
   return {
     tki: {
-      variant: "TKI-3 · standard first bag",
+      variant: "TKI-3 · Fonzie variation",
       verified: true,
       sequence: "ILZSOJT",
-      plan: [[3,0],[0,1],[3,0],[6,1],[8,0],[3,2],[1,2,19]],
+      plan: [[3,0],[0,1],[3,0],[6,1],[8,0],[7,0],[1,2,19]],
       steps: [
         "Lay I flat across columns 4–7.",
         "Stand L against the left wall, with its foot pointing right.",
         "Place Z across columns 4–6 on top of the I.",
         "Stand S in columns 7–8 to shape the right side.",
         "Set O against the right wall.",
-        "Lay J across columns 4–6, with its hook down on the right.",
+        "Lay J against the right wall above the O and S, with its hook raised on the left.",
         "Turn T upside down and kick it into the left cavity. The normal landing ghost will stay above it until the spin succeeds."
       ]
     },

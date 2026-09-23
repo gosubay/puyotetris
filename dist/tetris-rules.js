@@ -56,5 +56,17 @@
     return (type === "I" ? I_KICKS : JLSTZ_KICKS)[`${from}>${to}`];
   }
 
-  return { BASE_SHAPES, shape, kicksFor };
+  function occupiedCells(piece) {
+    return shape(piece.type,piece.rotation)
+      .map(([x,y]) => [piece.x + x,piece.y + y])
+      .sort(([ax,ay],[bx,by]) => ay - by || ax - bx);
+  }
+
+  function samePlacement(first, second) {
+    if (!first || !second || first.type !== second.type) return false;
+    const a = occupiedCells(first), b = occupiedCells(second);
+    return a.length === b.length && a.every(([x,y],index) => x === b[index][0] && y === b[index][1]);
+  }
+
+  return { BASE_SHAPES, shape, kicksFor, occupiedCells, samePlacement };
 });

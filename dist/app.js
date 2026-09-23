@@ -17,7 +17,7 @@
   };
   const PUYO_COLORS = { R: "#ff5470", G: "#58db78", B: "#4fa5ff", Y: "#ffd957" };
 
-  const { BASE_SHAPES, shape, kicksFor } = window.StackLabTetrisRules;
+  const { BASE_SHAPES, shape, kicksFor, samePlacement } = window.StackLabTetrisRules;
   const verifiedOpeners = window.StackLabOpeners;
 
   const PLAN_LIBRARY = {
@@ -169,7 +169,7 @@
 
     if (state.mode === "lesson") {
       const target = expectedTarget;
-      const correct = target && p.type === target.type && p.x === target.x && landedY === target.y && p.rotation % 4 === target.rotation % 4;
+      const correct = target && samePlacement({ ...p, y: landedY },target);
       if (correct) {
         state.step++;
         state.warning = "";
@@ -578,7 +578,7 @@
     for (const [sx,sy] of shape(t.active.type,t.active.rotation)) if (gy+sy>=2) drawGhostCell(ctx,(t.active.x+sx)*cell,(gy+sy-2)*cell,cell,TETRIS_COLORS[t.active.type]);
     const hint = state.mode === "lesson" ? lessonTetrisTarget() : bestTetrisPlacement();
     if (state.showHint && hint && hint.type === t.active.type) {
-      const aligned = t.active.x === hint.x && gy === hint.y && t.active.rotation % 4 === hint.rotation % 4;
+      const aligned = samePlacement({ ...t.active, y: gy },hint);
       for (const [sx,sy] of shape(hint.type,hint.rotation)) if (hint.y+sy>=2) drawGuideCell(ctx,(hint.x+sx)*cell,(hint.y+sy-2)*cell,cell,TETRIS_COLORS[hint.type],aligned);
     }
     for (const [x,y] of cellsFor(t.active)) if (y>=2) drawCell(ctx,x*cell,(y-2)*cell,cell,TETRIS_COLORS[t.active.type]);
