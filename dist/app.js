@@ -17,12 +17,7 @@
   };
   const PUYO_COLORS = { R: "#ff5470", G: "#58db78", B: "#4fa5ff", Y: "#ffd957" };
 
-  const BASE_SHAPES = {
-    I: [[0,1],[1,1],[2,1],[3,1]], O: [[1,0],[2,0],[1,1],[2,1]],
-    T: [[1,0],[0,1],[1,1],[2,1]], S: [[1,0],[2,0],[0,1],[1,1]],
-    Z: [[0,0],[1,0],[1,1],[2,1]], J: [[0,0],[0,1],[1,1],[2,1]],
-    L: [[2,0],[0,1],[1,1],[2,1]]
-  };
+  const { BASE_SHAPES, shape, kicksFor } = window.StackLabTetrisRules;
 
   const PLAN_LIBRARY = {
     tki: [[0,0],[4,0],[3,2],[6,0],[1,0],[7,0],[7,0]],
@@ -66,19 +61,6 @@
   function loadKeys() {
     try { return { ...DEFAULT_KEYS, ...JSON.parse(localStorage.getItem("stackLabKeys")) }; }
     catch { return { ...DEFAULT_KEYS }; }
-  }
-
-  function rotateCoords(coords) {
-    return coords.map(([x,y]) => [3 - y, x]);
-  }
-
-  function shape(type, rotation = 0) {
-    let result = BASE_SHAPES[type].map(p => [...p]);
-    if (type === "O") return result;
-    for (let i = 0; i < ((rotation % 4) + 4) % 4; i++) result = rotateCoords(result);
-    const minX = Math.min(...result.map(p => p[0]));
-    const minY = Math.min(...result.map(p => p[1]));
-    return result.map(([x,y]) => [x - minX, y - minY]);
   }
 
   function emptyBoard(width, height) {
@@ -155,7 +137,7 @@
   function rotateTetris(direction) {
     const p = state.tetris.active;
     const next = (p.rotation + direction + 4) % 4;
-    const kicks = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[0,-2]];
+    const kicks = kicksFor(p.type, p.rotation, next);
     for (const [dx,dy] of kicks) {
       if (!collidesTetris(p, dx, dy, next)) {
         p.x += dx; p.y += dy; p.rotation = next; state.tetris.lockMs = 0; return;
@@ -228,8 +210,11 @@
     const type = beforeLock ? state.tetris.active.type : (lesson.sequence[index] || state.tetris.active.type);
     const [xRaw, rotation] = plan[index];
     const coords = shape(type, rotation);
+    const minX = Math.min(...coords.map(p => p[0]));
     const maxX = Math.max(...coords.map(p => p[0]));
-    const x = Math.max(0, Math.min(9 - maxX, xRaw));
+    const width = maxX - minX + 1;
+    const desiredLeft = Math.max(0, Math.min(10 - width, xRaw));
+    const x = desiredLeft - minX;
     const probe = { type, x, y: 0, rotation };
     return { ...probe, y: ghostY(probe) };
   }
@@ -262,8 +247,10 @@
     const type = state.tetris.active.type;
     let best = null;
     for (let r = 0; r < 4; r++) {
-      const width = Math.max(...shape(type,r).map(p => p[0])) + 1;
-      for (let x = 0; x <= 10 - width; x++) {
+      const coords = shape(type,r);
+      const minX = Math.min(...coords.map(p => p[0]));
+      const maxX = Math.max(...coords.map(p => p[0]));
+      for (let x = -minX; x <= 9 - maxX; x++) {
         const candidate = scoreTetrisPlacement(type,x,r);
         if (candidate && (!best || candidate.score > best.score)) best = candidate;
       }
