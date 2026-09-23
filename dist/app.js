@@ -18,10 +18,9 @@
   const PUYO_COLORS = { R: "#ff5470", G: "#58db78", B: "#4fa5ff", Y: "#ffd957" };
 
   const { BASE_SHAPES, shape, kicksFor } = window.StackLabTetrisRules;
+  const verifiedOpeners = window.StackLabOpeners;
 
   const PLAN_LIBRARY = {
-    tki: [[0,0],[4,0],[3,2],[6,0],[1,0],[7,0],[7,0]],
-    "dt-cannon": [[0,0],[7,0],[3,0],[5,0],[1,1],[4,0],[4,0]],
     pco: [[0,0],[2,0],[7,0],[5,0],[2,0],[4,0],[7,0]],
     dpc: [[3,2],[0,1],[2,0],[7,1],[5,0],[6,0],[8,0]],
     gamushiro: [[0,0],[7,0],[4,0],[0,0],[7,0],[3,0],[3,0]],
@@ -53,7 +52,7 @@
 
   const state = {
     game: "tetris", mode: "lesson", lessonIndex: 0, step: 0, paused: false,
-    showHint: true, speed: 5, keys: loadKeys(), lastTime: 0, fallAccumulator: 0,
+    showHint: false, speed: 5, keys: loadKeys(), lastTime: 0, fallAccumulator: 0,
     softDropAccumulator: 0, heldActions: new Set(),
     undo: null, warning: "", recommendation: "", tetris: null, puyo: null
   };
@@ -205,10 +204,10 @@
 
   function lessonTetrisTarget(beforeLock = false) {
     const lesson = activeLesson();
-    const plan = PLAN_LIBRARY[lesson.id] || PLAN_LIBRARY.tki;
+    const plan = verifiedOpeners[lesson.id]?.plan || PLAN_LIBRARY[lesson.id] || PLAN_LIBRARY.pco;
     const index = Math.min(state.step, plan.length - 1);
     const type = beforeLock ? state.tetris.active.type : (lesson.sequence[index] || state.tetris.active.type);
-    const [xRaw, rotation] = plan[index];
+    const [xRaw, rotation, fixedY] = plan[index];
     const coords = shape(type, rotation);
     const minX = Math.min(...coords.map(p => p[0]));
     const maxX = Math.max(...coords.map(p => p[0]));
@@ -216,7 +215,7 @@
     const desiredLeft = Math.max(0, Math.min(10 - width, xRaw));
     const x = desiredLeft - minX;
     const probe = { type, x, y: 0, rotation };
-    return { ...probe, y: ghostY(probe) };
+    return { ...probe, y: Number.isInteger(fixedY) ? fixedY : ghostY(probe) };
   }
 
   function scoreTetrisPlacement(type, x, rotation) {
@@ -444,7 +443,11 @@
   function populateLessons() {
     const picker = $("#lessonPicker"); picker.innerHTML = "";
     lessons[state.game].forEach((lesson,index) => {
-      const option = document.createElement("option"); option.value = index; option.textContent = lesson.name; picker.append(option);
+      const option = document.createElement("option");
+      option.value = index;
+      option.textContent = lesson.verified === false && state.game === "tetris" ? `${lesson.name} · coming soon` : lesson.name;
+      option.disabled = lesson.verified === false && state.game === "tetris";
+      picker.append(option);
     });
     picker.value = String(state.lessonIndex); updateLessonCard();
   }
@@ -470,17 +473,20 @@
     if (state.warning) {
       $("#instructionTitle").textContent = "This changes the formation";
       $("#instructionText").textContent = state.warning;
-      $("#placementText").textContent = "Undo, then move onto the glowing guide target";
+      $("#placementText").textContent = "Undo, then match the colored target outline";
     } else if (state.mode === "play") {
       $("#instructionTitle").textContent = state.recommendation || "Keep the stack clean";
       $("#instructionText").textContent = isTetris ? "The hint favors low height, few holes, and a smooth surface." : "The hint favors matching neighbors while protecting space for a larger chain.";
-      $("#placementText").textContent = "Dashed ghost = landing · glow = recommendation";
+      $("#placementText").textContent = "Faint silhouette = landing · colored outline = recommendation";
     } else {
       const target = isTetris ? lessonTetrisTarget() : lessonPuyoTarget();
-      const location = isTetris ? `column ${target.x+1}` : `column ${target.x+1}`;
+      const opener = isTetris ? verifiedOpeners[lesson.id] : null;
+      const coords = isTetris ? shape(target.type,target.rotation) : [];
+      const occupiedLeft = isTetris ? target.x + Math.min(...coords.map(([x])=>x)) : target.x;
+      const location = `column ${occupiedLeft+1}`;
       $("#instructionTitle").textContent = `${step === 1 ? "Start" : "Continue"} in ${location}`;
-      $("#instructionText").textContent = isTetris ? "Match the ghost position and orientation, then hard drop to confirm the step." : "Place this pair on the highlighted column in the shown orientation.";
-      $("#placementText").textContent = "Dashed ghost = landing · glow = correct spot";
+      $("#instructionText").textContent = isTetris && opener ? opener.steps[Math.min(state.step,opener.steps.length-1)] : isTetris ? "Match the target position and orientation, then hard drop to confirm the step." : "Place this pair on the highlighted column in the shown orientation.";
+      $("#placementText").textContent = isTetris ? "Faint silhouette = current landing · colored outline = lesson target" : "Dashed ghost = landing · outline = lesson target";
     }
     $("#whyText").textContent = lesson.focus;
   }
@@ -492,6 +498,8 @@
     $("#modeStatus").textContent = state.mode === "lesson" ? "GUIDED OPENER" : "RANDOM PLAY";
     $("#speedLabel").textContent = state.speed === 0 ? "No automatic fall" : `${state.speed}× thinking time`;
     $("#holdKey").textContent = displayKey(state.keys.hold);
+    $("#hintButton").classList.toggle("active",state.showHint);
+    $("#hintButtonLabel").textContent = state.showHint ? "Hide guide" : "Show guide";
   }
 
   function displayKey(key) {
@@ -514,22 +522,28 @@
     context.restore();
   }
 
-  function drawGuideCell(context,x,y,size,color) {
-    const pulse = .56 + Math.sin(performance.now() / 220) * .12;
+  function drawGhostCell(context,x,y,size,color) {
     context.save();
-    context.globalAlpha = pulse;
-    context.shadowColor = color;
-    context.shadowBlur = Math.max(12, size * .55);
     context.fillStyle = color;
-    context.fillRect(x + 5, y + 5, size - 10, size - 10);
-    context.shadowBlur = 0;
-    context.globalAlpha = .95;
-    context.strokeStyle = "#ffffff";
-    context.lineWidth = Math.max(2, size * .07);
-    context.strokeRect(x + 3, y + 3, size - 6, size - 6);
+    context.globalAlpha = .13;
+    context.fillRect(x + 4, y + 4, size - 8, size - 8);
+    context.globalAlpha = .24;
     context.strokeStyle = color;
-    context.lineWidth = Math.max(2, size * .12);
-    context.strokeRect(x + 1, y + 1, size - 2, size - 2);
+    context.lineWidth = Math.max(1, size * .035);
+    context.strokeRect(x + 3, y + 3, size - 6, size - 6);
+    context.restore();
+  }
+
+  function drawGuideCell(context,x,y,size,color,aligned=false) {
+    const targetColor = aligned ? "#63e59b" : color;
+    context.save();
+    context.fillStyle = targetColor;
+    context.globalAlpha = aligned ? .17 : .075;
+    context.fillRect(x + 5, y + 5, size - 10, size - 10);
+    context.globalAlpha = aligned ? .95 : .72;
+    context.strokeStyle = targetColor;
+    context.lineWidth = Math.max(2, size * .065);
+    context.strokeRect(x + 3, y + 3, size - 6, size - 6);
     context.restore();
   }
 
@@ -551,10 +565,11 @@
     const cell = 36, t = state.tetris; drawBoardBackground(10,20,cell);
     for (let y=2;y<22;y++) for (let x=0;x<10;x++) if (t.board[y][x]) drawCell(ctx,x*cell,(y-2)*cell,cell,TETRIS_COLORS[t.board[y][x]]);
     const gy = ghostY(t.active);
-    for (const [sx,sy] of shape(t.active.type,t.active.rotation)) if (gy+sy>=2) drawCell(ctx,(t.active.x+sx)*cell,(gy+sy-2)*cell,cell,TETRIS_COLORS[t.active.type],.38,true);
+    for (const [sx,sy] of shape(t.active.type,t.active.rotation)) if (gy+sy>=2) drawGhostCell(ctx,(t.active.x+sx)*cell,(gy+sy-2)*cell,cell,TETRIS_COLORS[t.active.type]);
     const hint = state.mode === "lesson" ? lessonTetrisTarget() : bestTetrisPlacement();
     if (state.showHint && hint && hint.type === t.active.type) {
-      for (const [sx,sy] of shape(hint.type,hint.rotation)) if (hint.y+sy>=2) drawGuideCell(ctx,(hint.x+sx)*cell,(hint.y+sy-2)*cell,cell,TETRIS_COLORS[hint.type]);
+      const aligned = t.active.x === hint.x && gy === hint.y && t.active.rotation % 4 === hint.rotation % 4;
+      for (const [sx,sy] of shape(hint.type,hint.rotation)) if (hint.y+sy>=2) drawGuideCell(ctx,(hint.x+sx)*cell,(hint.y+sy-2)*cell,cell,TETRIS_COLORS[hint.type],aligned);
     }
     for (const [x,y] of cellsFor(t.active)) if (y>=2) drawCell(ctx,x*cell,(y-2)*cell,cell,TETRIS_COLORS[t.active.type]);
     drawMiniTetris(holdCtx,t.hold,100,86);
@@ -667,7 +682,7 @@
   function handleAction(action) {
     if(action==="pause"){togglePause();return;}
     if(state.paused)return;
-    if(action==="hint"){state.showHint=!state.showHint;$("#hintButton").classList.toggle("active",state.showHint);showToast(state.showHint?"Guide target shown":"Guide target hidden");return;}
+    if(action==="hint"){state.showHint=!state.showHint;updateUI();showToast(state.showHint?"Guide target shown":"Guide target hidden");return;}
     if(action==="undo"){undo();return;}
     if(state.game==="tetris"){
       if(action==="left")moveTetris(-1,0);if(action==="right")moveTetris(1,0);if(action==="softDrop")moveTetris(0,1);
