@@ -52,7 +52,7 @@
 
   const state = {
     game: "tetris", mode: "lesson", lessonIndex: 0, step: 0, paused: false,
-    showHint: false, speed: 5, keys: loadKeys(), lastTime: 0, fallAccumulator: 0,
+    showHint: true, speed: 5, keys: loadKeys(), lastTime: 0, fallAccumulator: 0,
     softDropAccumulator: 0, heldActions: new Set(),
     undo: null, warning: "", recommendation: "", tetris: null, puyo: null
   };
@@ -175,8 +175,17 @@
         state.warning = "";
         showToast(state.step >= activeLesson().sequence.length ? "Foundation complete!" : "Good placement");
       } else {
-        state.warning = "That placement changes the planned formation. Undo to retry the recommended move.";
-        showToast("Different placement — undo is available");
+        const retry = state.undo.tetris;
+        retry.active = { type: p.type, x: 3, y: 0, rotation: 0 };
+        retry.lockMs = 0;
+        state.tetris = retry;
+        state.undo = null;
+        state.showHint = true;
+        state.warning = "That placement changes the planned formation. The piece has been reset so you can retry the same step.";
+        $("#undoButton").disabled = true;
+        showToast("Try that placement again");
+        updateUI();
+        return;
       }
     }
     spawnTetris();
@@ -434,6 +443,7 @@
 
   function setMode(mode) {
     state.mode = mode;
+    if (mode === "lesson") state.showHint = true;
     $$(".mode-button").forEach(b => b.classList.toggle("active",b.dataset.mode === mode));
     $(".lesson-picker-wrap").style.opacity = mode === "lesson" ? "1" : ".48";
     $("#lessonPicker").disabled = mode !== "lesson";
@@ -473,7 +483,7 @@
     if (state.warning) {
       $("#instructionTitle").textContent = "This changes the formation";
       $("#instructionText").textContent = state.warning;
-      $("#placementText").textContent = "Undo, then match the colored target outline";
+      $("#placementText").textContent = "Same piece reset · match the colored target outline";
     } else if (state.mode === "play") {
       $("#instructionTitle").textContent = state.recommendation || "Keep the stack clean";
       $("#instructionText").textContent = isTetris ? "The hint favors low height, few holes, and a smooth surface." : "The hint favors matching neighbors while protecting space for a larger chain.";
@@ -732,7 +742,7 @@
   $("#resetKeys").addEventListener("click",()=>{state.keys={...DEFAULT_KEYS};localStorage.setItem("stackLabKeys",JSON.stringify(state.keys));buildKeyGrid();updateUI();});
   $$(".game-tab").forEach(button=>button.addEventListener("click",()=>setGame(button.dataset.game)));
   $$(".mode-button").forEach(button=>button.addEventListener("click",()=>setMode(button.dataset.mode)));
-  $("#lessonPicker").addEventListener("change",event=>{state.lessonIndex=Number(event.target.value);resetGame();});
+  $("#lessonPicker").addEventListener("change",event=>{state.lessonIndex=Number(event.target.value);state.showHint=true;resetGame();});
   $("#speedPicker").addEventListener("change",event=>{state.speed=Number(event.target.value);state.fallAccumulator=0;updateUI();});
   $("#restartButton").addEventListener("click",resetGame);
   $("#pauseButton").addEventListener("click",togglePause);
