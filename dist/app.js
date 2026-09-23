@@ -51,7 +51,7 @@
   };
 
   const state = {
-    game: "tetris", mode: "lesson", lessonIndex: 0, step: 0, paused: false,
+    game: "tetris", mode: "lesson", lessonIndex: 0, step: 0, paused: false, completed: false,
     showHint: true, speed: 5, keys: loadKeys(), lastTime: 0, fallAccumulator: 0,
     softDropAccumulator: 0, heldActions: new Set(),
     undo: null, warning: "", recommendation: "", tetris: null, puyo: null
@@ -173,7 +173,14 @@
       if (correct) {
         state.step++;
         state.warning = "";
-        showToast(state.step >= activeLesson().sequence.length ? "Foundation complete!" : "Good placement");
+        if (state.step >= activeLesson().sequence.length) {
+          state.completed = true;
+          t.active = null;
+          showToast(activeLesson().id === "dt-cannon" ? "TSD + TST complete!" : "T-spin lesson complete!");
+          updateUI();
+          return;
+        }
+        showToast("Good placement");
       } else {
         const retry = state.undo.tetris;
         retry.active = { type: p.type, x: 3, y: 0, rotation: 0 };
@@ -422,13 +429,13 @@
   function undo() {
     if (!state.undo || state.undo.game !== state.game) return;
     state.mode = state.undo.mode; state.lessonIndex = state.undo.lessonIndex; state.step = state.undo.step;
-    state.tetris = state.undo.tetris; state.puyo = state.undo.puyo; state.undo = null; state.warning = "";
+    state.tetris = state.undo.tetris; state.puyo = state.undo.puyo; state.undo = null; state.warning = ""; state.completed = false; state.paused = false;
     $("#undoButton").disabled = true;
     showToast("Move undone"); updateUI(); updateCoach();
   }
 
   function resetGame() {
-    state.step = 0; state.undo = null; state.warning = ""; state.fallAccumulator = 0; state.softDropAccumulator = 0; state.heldActions.clear();
+    state.step = 0; state.undo = null; state.warning = ""; state.paused = false; state.completed = false; state.fallAccumulator = 0; state.softDropAccumulator = 0; state.heldActions.clear();
     $("#undoButton").disabled = true;
     if (state.game === "tetris") initTetris(); else initPuyo();
     updateUI();
@@ -476,10 +483,21 @@
     const isTetris = state.game === "tetris";
     const pieceName = isTetris ? `${state.tetris?.active?.type || "—"} TETROMINO` : `${(state.puyo?.active?.colors || []).join(" + ")} PAIR`;
     $("#currentPieceName").textContent = pieceName;
+    if (state.completed) {
+      $("#coachState").textContent = "COMPLETE";
+      $("#coachState").style.color = "#63e59b";
+      $("#instructionKicker").textContent = "LESSON COMPLETE";
+      $("#instructionTitle").textContent = lesson.id === "dt-cannon" ? "TSD + TST complete" : "First-bag T-spin complete";
+      $("#instructionText").textContent = lesson.id === "dt-cannon" ? "You built the cannon, cleared the T-Spin Double, and finished the T-Spin Triple." : "You completed the guided TKI bag and its T-Spin Double.";
+      $("#placementText").textContent = "Restart the lesson to practise it again";
+      $("#whyText").textContent = lesson.focus;
+      return;
+    }
     $("#coachState").textContent = state.warning ? "CHECK MOVE" : "READY";
     $("#coachState").style.color = state.warning ? "#ffd45e" : "#63e59b";
     const step = state.step + 1;
-    $("#instructionKicker").textContent = state.mode === "play" ? "LIVE RECOMMENDATION" : `STEP ${step} · ${step <= 2 ? "FOUNDATION" : "BUILD"}`;
+    const bagPhase = lesson.id === "dt-cannon" ? (step <= 7 ? "BAG 1" : step <= 14 ? "BAG 2" : "BAG 3 ATTACK") : "BAG 1";
+    $("#instructionKicker").textContent = state.mode === "play" ? "LIVE RECOMMENDATION" : `STEP ${step} · ${bagPhase}`;
     if (state.warning) {
       $("#instructionTitle").textContent = "This changes the formation";
       $("#instructionText").textContent = state.warning;
@@ -504,12 +522,20 @@
   function updateUI() {
     updateLessonCard(); updateCoach();
     const total = state.game === "tetris" ? activeLesson().sequence.length : activeLesson().colors.length/2;
-    $("#stepCounter").textContent = state.mode === "lesson" ? `STEP ${Math.min(state.step+1,total)} / ${total}` : "ADAPTIVE GUIDE";
-    $("#modeStatus").textContent = state.mode === "lesson" ? "GUIDED OPENER" : "RANDOM PLAY";
+    $("#stepCounter").textContent = state.completed ? "COMPLETE" : state.mode === "lesson" ? `STEP ${Math.min(state.step+1,total)} / ${total}` : "ADAPTIVE GUIDE";
+    $("#modeStatus").textContent = state.completed ? "LESSON FINISHED" : state.mode === "lesson" ? "GUIDED OPENER" : "RANDOM PLAY";
     $("#speedLabel").textContent = state.speed === 0 ? "No automatic fall" : `${state.speed}× thinking time`;
     $("#holdKey").textContent = displayKey(state.keys.hold);
     $("#hintButton").classList.toggle("active",state.showHint);
     $("#hintButtonLabel").textContent = state.showHint ? "Hide guide" : "Show guide";
+    const overlayVisible = state.paused || state.completed;
+    $("#pauseOverlay").classList.toggle("visible",overlayVisible);
+    $("#pauseOverlay").setAttribute("aria-hidden",String(!overlayVisible));
+    $("#overlayTitle").textContent = state.completed ? "LESSON COMPLETE" : "PAUSED";
+    $("#overlayText").textContent = state.completed ? (activeLesson().id === "dt-cannon" ? "TSD + TST finished" : "First-bag T-spin finished") : "The board stays visible";
+    $("#overlayKey").textContent = state.completed ? "RESTART TO PRACTISE AGAIN" : "ENTER TO CONTINUE";
+    $("#pauseButton").disabled = state.completed;
+    $("#pauseButton").firstChild.textContent = state.paused ? "▶" : "Ⅱ";
   }
 
   function displayKey(key) {
@@ -574,6 +600,12 @@
   function drawTetris() {
     const cell = 36, t = state.tetris; drawBoardBackground(10,20,cell);
     for (let y=2;y<22;y++) for (let x=0;x<10;x++) if (t.board[y][x]) drawCell(ctx,x*cell,(y-2)*cell,cell,TETRIS_COLORS[t.board[y][x]]);
+    if (!t.active) {
+      drawMiniTetris(holdCtx,t.hold,100,86);
+      drawTetrisQueue();
+      drawMiniTetris(coachCtx,null,76,58);
+      return;
+    }
     const gy = ghostY(t.active);
     for (const [sx,sy] of shape(t.active.type,t.active.rotation)) if (gy+sy>=2) drawGhostCell(ctx,(t.active.x+sx)*cell,(gy+sy-2)*cell,cell,TETRIS_COLORS[t.active.type]);
     const hint = state.mode === "lesson" ? lessonTetrisTarget() : bestTetrisPlacement();
@@ -657,7 +689,7 @@
 
   function tick(timestamp) {
     const delta=Math.min(50,timestamp-state.lastTime||0); state.lastTime=timestamp;
-    if(!state.paused){
+    if(!state.paused&&!state.completed){
       if(state.heldActions.has("softDrop")){
         state.softDropAccumulator+=delta;
         while(state.softDropAccumulator>=SOFT_DROP_INTERVAL){
@@ -690,6 +722,7 @@
   }
 
   function handleAction(action) {
+    if(state.completed){if(action==="undo")undo();return;}
     if(action==="pause"){togglePause();return;}
     if(state.paused)return;
     if(action==="hint"){state.showHint=!state.showHint;updateUI();showToast(state.showHint?"Guide target shown":"Guide target hidden");return;}
@@ -704,8 +737,8 @@
   }
 
   function togglePause() {
-    state.paused=!state.paused; $("#pauseOverlay").classList.toggle("visible",state.paused); $("#pauseOverlay").setAttribute("aria-hidden",String(!state.paused));
-    $("#pauseButton").firstChild.textContent=state.paused?"▶":"Ⅱ";
+    if(state.completed)return;
+    state.paused=!state.paused; updateUI();
   }
 
   let toastTimer;

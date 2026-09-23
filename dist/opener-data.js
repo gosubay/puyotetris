@@ -22,10 +22,14 @@
       ]
     },
     "dt-cannon": {
-      variant: "DT Cannon · first-bag foundation",
+      variant: "DT Cannon · TSD → TST",
       verified: true,
-      sequence: "LSJZTOI",
-      plan: [[3,0],[3,0],[7,0],[7,0],[3,0],[0,0],[6,1]],
+      sequence: "LSJZTOILJZOISTT",
+      plan: [
+        [3,0],[3,0],[7,0],[7,0],[3,0],[0,0],[6,1],
+        [2,3],[0,1],[4,0],[7,0],[9,1],[5,1],[1,2,18],
+        [1,3,19]
+      ],
       steps: [
         "Lay L across columns 4–6, with its hook raised on the right.",
         "Place S flat directly over the L.",
@@ -33,7 +37,15 @@
         "Place Z over the J near the right wall.",
         "Lay T flat above the L and S foundation.",
         "Set O in the bottom-left corner.",
-        "Stand I vertically in column 7 to finish the first-bag DT foundation."
+        "Stand I vertically in column 7 to finish the first-bag DT foundation.",
+        "Start bag 2 by turning L counter-clockwise and placing it over the centre-left tower.",
+        "Stand J against the left wall to build the TSD roof.",
+        "Place Z flat across columns 5–7.",
+        "Set O across columns 8–9.",
+        "Stand I vertically in column 10.",
+        "Stand S across columns 6–7 to close the upper shelf.",
+        "Turn T upside down and kick it into the left cavity for the T-Spin Double.",
+        "Use the next bag's T vertically in the revealed cavity for the T-Spin Triple."
       ]
     }
   };

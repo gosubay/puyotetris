@@ -102,7 +102,7 @@ test("TKI-3 final T completes a two-line clear", () => {
 });
 
 test("DT Cannon first bag forms the canonical foundation", () => {
-  const { board, cleared } = build(openers["dt-cannon"]);
+  const { board, cleared } = build(openers["dt-cannon"],7);
   assert.equal(cleared, 0);
   assert.deepEqual(occupiedRows(board), [
     "____T_____",
@@ -110,5 +110,40 @@ test("DT Cannon first bag forms the canonical foundation", () => {
     "____SSIZZ_",
     "OO_SSLIJZZ",
     "OO_LLLIJJJ"
+  ]);
+});
+
+test("DT Cannon bag 2 builds a reachable TSD", () => {
+  const opener = openers["dt-cannon"];
+  const { board, cleared } = build(opener,13);
+  assert.equal(cleared,0);
+  assert.deepEqual(occupiedRows(board),[
+    "_____S____",
+    "__LL_SS___",
+    "___LZZS__I",
+    "JJ_LTZZOOI",
+    "J__TTTIOOI",
+    "J___SSIZZI",
+    "OO_SSLIJZZ",
+    "OO_LLLIJJJ"
+  ]);
+  const [left,rotation,y] = opener.plan[13];
+  const minX = Math.min(...shape("T",rotation).map(([x])=>x));
+  assert.equal(canReach(board,"T",{ x:left-minX,y,rotation }),true);
+});
+
+test("DT Cannon completes its TSD and revealed TST", () => {
+  const opener = openers["dt-cannon"];
+  const afterTsd = build(opener,14);
+  assert.equal(afterTsd.cleared,2);
+  const [left,rotation,y] = opener.plan[14];
+  const minX = Math.min(...shape("T",rotation).map(([x])=>x));
+  assert.equal(canReach(afterTsd.board,"T",{ x:left-minX,y,rotation }),true);
+  const complete = build(opener);
+  assert.equal(complete.cleared,5);
+  assert.deepEqual(occupiedRows(complete.board),[
+    "_____S____",
+    "__LL_SS___",
+    "___LZZS__I"
   ]);
 });
