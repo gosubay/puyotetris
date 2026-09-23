@@ -59,6 +59,7 @@
   const state = {
     game: "tetris", mode: "lesson", lessonIndex: 0, step: 0, paused: false,
     showHint: true, speed: 5, keys: loadKeys(), lastTime: 0, fallAccumulator: 0,
+    softDropAccumulator: 0, heldActions: new Set(),
     undo: null, warning: "", recommendation: "", tetris: null, puyo: null
   };
 
@@ -287,7 +288,7 @@
       for (let i = 0; i < colors.length; i += 2) pairs.push([colors[i], colors[i+1]]);
     }
     while (pairs.length < 8) pairs.push(randomPuyoPair());
-    state.puyo = { board: emptyBoard(6,13), queue: pairs, active: null, chains: 0 };
+    state.puyo = { board: emptyBoard(6,13), queue: pairs, active: null, chains: 0, lockMs: 0 };
     spawnPuyo();
     if (state.mode === "play") updatePuyoRecommendation();
   }
@@ -301,6 +302,7 @@
     const p = state.puyo;
     while (p.queue.length < 7) p.queue.push(randomPuyoPair());
     p.active = { colors: p.queue.shift(), x: 2, y: 1, rotation: 0 };
+    p.lockMs = 0;
     updateCoach();
   }
 
@@ -318,13 +320,13 @@
   }
 
   function movePuyo(dx,dy) {
-    if (!collidesPuyo(state.puyo.active,dx,dy)) { state.puyo.active.x += dx; state.puyo.active.y += dy; return true; }
+    if (!collidesPuyo(state.puyo.active,dx,dy)) { state.puyo.active.x += dx; state.puyo.active.y += dy; state.puyo.lockMs = 0; return true; }
     return false;
   }
 
   function rotatePuyo(direction) {
     const pair = state.puyo.active, next = (pair.rotation + direction + 4) % 4;
-    for (const dx of [0,-1,1]) if (!collidesPuyo(pair,dx,0,next)) { pair.x += dx; pair.rotation = next; return; }
+    for (const dx of [0,-1,1]) if (!collidesPuyo(pair,dx,0,next)) { pair.x += dx; pair.rotation = next; state.puyo.lockMs = 0; return; }
   }
 
   function puyoGhost(pair) {
@@ -431,7 +433,7 @@
   }
 
   function resetGame() {
-    state.step = 0; state.undo = null; state.warning = ""; state.fallAccumulator = 0;
+    state.step = 0; state.undo = null; state.warning = ""; state.fallAccumulator = 0; state.softDropAccumulator = 0; state.heldActions.clear();
     $("#undoButton").disabled = true;
     if (state.game === "tetris") initTetris(); else initPuyo();
     updateUI();
@@ -481,17 +483,17 @@
     if (state.warning) {
       $("#instructionTitle").textContent = "This changes the formation";
       $("#instructionText").textContent = state.warning;
-      $("#placementText").textContent = "Undo, then follow the ghost placement";
+      $("#placementText").textContent = "Undo, then move onto the glowing guide target";
     } else if (state.mode === "play") {
       $("#instructionTitle").textContent = state.recommendation || "Keep the stack clean";
       $("#instructionText").textContent = isTetris ? "The hint favors low height, few holes, and a smooth surface." : "The hint favors matching neighbors while protecting space for a larger chain.";
-      $("#placementText").textContent = "Ghost marks the cleanest current placement";
+      $("#placementText").textContent = "Dashed ghost = landing · glow = recommendation";
     } else {
       const target = isTetris ? lessonTetrisTarget() : lessonPuyoTarget();
       const location = isTetris ? `column ${target.x+1}` : `column ${target.x+1}`;
       $("#instructionTitle").textContent = `${step === 1 ? "Start" : "Continue"} in ${location}`;
       $("#instructionText").textContent = isTetris ? "Match the ghost position and orientation, then hard drop to confirm the step." : "Place this pair on the highlighted column in the shown orientation.";
-      $("#placementText").textContent = "Ghost marks the taught sequence";
+      $("#placementText").textContent = "Dashed ghost = landing · glow = correct spot";
     }
     $("#whyText").textContent = lesson.focus;
   }
@@ -525,6 +527,25 @@
     context.restore();
   }
 
+  function drawGuideCell(context,x,y,size,color) {
+    const pulse = .56 + Math.sin(performance.now() / 220) * .12;
+    context.save();
+    context.globalAlpha = pulse;
+    context.shadowColor = color;
+    context.shadowBlur = Math.max(12, size * .55);
+    context.fillStyle = color;
+    context.fillRect(x + 5, y + 5, size - 10, size - 10);
+    context.shadowBlur = 0;
+    context.globalAlpha = .95;
+    context.strokeStyle = "#ffffff";
+    context.lineWidth = Math.max(2, size * .07);
+    context.strokeRect(x + 3, y + 3, size - 6, size - 6);
+    context.strokeStyle = color;
+    context.lineWidth = Math.max(2, size * .12);
+    context.strokeRect(x + 1, y + 1, size - 2, size - 2);
+    context.restore();
+  }
+
   function shade(hex,amount) {
     const n = parseInt(hex.slice(1),16), r=Math.max(0,Math.min(255,(n>>16)+amount)), g=Math.max(0,Math.min(255,((n>>8)&255)+amount)), b=Math.max(0,Math.min(255,(n&255)+amount));
     return `#${(b|(g<<8)|(r<<16)).toString(16).padStart(6,"0")}`;
@@ -542,12 +563,12 @@
   function drawTetris() {
     const cell = 36, t = state.tetris; drawBoardBackground(10,20,cell);
     for (let y=2;y<22;y++) for (let x=0;x<10;x++) if (t.board[y][x]) drawCell(ctx,x*cell,(y-2)*cell,cell,TETRIS_COLORS[t.board[y][x]]);
+    const gy = ghostY(t.active);
+    for (const [sx,sy] of shape(t.active.type,t.active.rotation)) if (gy+sy>=2) drawCell(ctx,(t.active.x+sx)*cell,(gy+sy-2)*cell,cell,TETRIS_COLORS[t.active.type],.38,true);
     const hint = state.mode === "lesson" ? lessonTetrisTarget() : bestTetrisPlacement();
     if (state.showHint && hint && hint.type === t.active.type) {
-      for (const [sx,sy] of shape(hint.type,hint.rotation)) if (hint.y+sy>=2) drawCell(ctx,(hint.x+sx)*cell,(hint.y+sy-2)*cell,cell,TETRIS_COLORS[hint.type],.9,true);
+      for (const [sx,sy] of shape(hint.type,hint.rotation)) if (hint.y+sy>=2) drawGuideCell(ctx,(hint.x+sx)*cell,(hint.y+sy-2)*cell,cell,TETRIS_COLORS[hint.type]);
     }
-    const gy = ghostY(t.active);
-    if (!state.showHint) for (const [sx,sy] of shape(t.active.type,t.active.rotation)) if (gy+sy>=2) drawCell(ctx,(t.active.x+sx)*cell,(gy+sy-2)*cell,cell,TETRIS_COLORS[t.active.type],.25,true);
     for (const [x,y] of cellsFor(t.active)) if (y>=2) drawCell(ctx,x*cell,(y-2)*cell,cell,TETRIS_COLORS[t.active.type]);
     drawMiniTetris(holdCtx,t.hold,100,86);
     drawTetrisQueue();
@@ -576,11 +597,31 @@
     context.restore();
   }
 
+  function drawPuyoGuideCircle(context,cx,cy,r,color) {
+    const pulse = .48 + Math.sin(performance.now() / 220) * .12;
+    context.save();
+    context.globalAlpha = pulse;
+    context.shadowColor = color;
+    context.shadowBlur = Math.max(14, r * .8);
+    context.fillStyle = color;
+    context.beginPath(); context.arc(cx,cy,r-6,0,Math.PI*2); context.fill();
+    context.shadowBlur = 0;
+    context.globalAlpha = .95;
+    context.strokeStyle = "#ffffff"; context.lineWidth = 3;
+    context.beginPath(); context.arc(cx,cy,r-4,0,Math.PI*2); context.stroke();
+    context.strokeStyle = color; context.lineWidth = 4;
+    context.beginPath(); context.arc(cx,cy,r-1,0,Math.PI*2); context.stroke();
+    context.restore();
+  }
+
   function drawPuyo() {
     const p=state.puyo, cell=60; drawBoardBackground(6,12,cell);
     for(let y=1;y<13;y++)for(let x=0;x<6;x++)if(p.board[y][x])drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.46,PUYO_COLORS[p.board[y][x]]);
+    const currentGhostY=puyoGhost(p.active);
+    const currentGhost={...p.active,y:currentGhostY};
+    puyoCells(currentGhost).forEach(([x,y,c])=>{if(y>=1)drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.45,PUYO_COLORS[c],.38,true);});
     const hint=state.mode==="lesson"?lessonPuyoTarget():bestPuyoPlacement();
-    if(state.showHint&&hint){const probe={...p.active,x:hint.x,y:hint.y,rotation:hint.rotation};puyoCells(probe).forEach(([x,y,c])=>{if(y>=1)drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.45,PUYO_COLORS[c],.9,true);});}
+    if(state.showHint&&hint){const probe={...p.active,x:hint.x,y:hint.y,rotation:hint.rotation};puyoCells(probe).forEach(([x,y,c])=>{if(y>=1)drawPuyoGuideCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.45,PUYO_COLORS[c]);});}
     puyoCells(p.active).forEach(([x,y,c])=>{if(y>=1)drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.46,PUYO_COLORS[c]);});
     drawMiniPuyo(holdCtx,null,100,86);
     drawPuyoQueue(); drawMiniPuyo(coachCtx,p.active.colors,76,58);
@@ -599,16 +640,37 @@
 
   function gravityInterval() { return state.speed===0?Infinity:(state.speed===10?2000:1000); }
 
+  const SOFT_DROP_INTERVAL = 45;
+  const LOCK_DELAY = 500;
+
   function tick(timestamp) {
     const delta=Math.min(50,timestamp-state.lastTime||0); state.lastTime=timestamp;
-    if(!state.paused&&state.speed!==0){
-      state.fallAccumulator+=delta;
-      if(state.fallAccumulator>=gravityInterval()){
-        state.fallAccumulator=0;
-        const moved=state.game==="tetris"?moveTetris(0,1):movePuyo(0,1);
-        if(!moved){
-          if(state.game==="tetris"){state.tetris.lockMs+=gravityInterval();if(state.tetris.lockMs>=500)lockTetris();}
-          else lockPuyo();
+    if(!state.paused){
+      if(state.heldActions.has("softDrop")){
+        state.softDropAccumulator+=delta;
+        while(state.softDropAccumulator>=SOFT_DROP_INTERVAL){
+          state.softDropAccumulator-=SOFT_DROP_INTERVAL;
+          if(state.game==="tetris")moveTetris(0,1);else movePuyo(0,1);
+        }
+      }else state.softDropAccumulator=0;
+
+      if(state.speed!==0){
+        state.fallAccumulator+=delta;
+        if(state.fallAccumulator>=gravityInterval()){
+          state.fallAccumulator-=gravityInterval();
+          if(state.game==="tetris")moveTetris(0,1);else movePuyo(0,1);
+        }
+
+        if(state.game==="tetris"){
+          if(collidesTetris(state.tetris.active,0,1)){
+            state.tetris.lockMs+=delta;
+            if(state.tetris.lockMs>=LOCK_DELAY)lockTetris();
+          }else state.tetris.lockMs=0;
+        }else{
+          if(collidesPuyo(state.puyo.active,0,1)){
+            state.puyo.lockMs+=delta;
+            if(state.puyo.lockMs>=LOCK_DELAY)lockPuyo();
+          }else state.puyo.lockMs=0;
         }
       }
     }
@@ -618,7 +680,7 @@
   function handleAction(action) {
     if(action==="pause"){togglePause();return;}
     if(state.paused)return;
-    if(action==="hint"){state.showHint=!state.showHint;$("#hintButton").classList.toggle("active",state.showHint);showToast(state.showHint?"Hint shown":"Hint hidden");return;}
+    if(action==="hint"){state.showHint=!state.showHint;$("#hintButton").classList.toggle("active",state.showHint);showToast(state.showHint?"Guide target shown":"Guide target hidden");return;}
     if(action==="undo"){undo();return;}
     if(state.game==="tetris"){
       if(action==="left")moveTetris(-1,0);if(action==="right")moveTetris(1,0);if(action==="softDrop")moveTetris(0,1);
@@ -649,8 +711,19 @@
     if(listeningAction){event.preventDefault();state.keys[listeningAction]=event.key.length===1?event.key.toLowerCase():event.key;localStorage.setItem("stackLabKeys",JSON.stringify(state.keys));listeningAction=null;buildKeyGrid();updateUI();return;}
     if($("#settingsDialog").open)return;
     const action=Object.keys(state.keys).find(key=>state.keys[key].toLowerCase()===event.key.toLowerCase());
-    if(action){event.preventDefault();handleAction(action);}
+    if(action){
+      event.preventDefault();
+      const repeatable=action==="left"||action==="right";
+      if(state.heldActions.has(action)&&!repeatable)return;
+      state.heldActions.add(action);
+      handleAction(action);
+    }
   });
+  document.addEventListener("keyup",event=>{
+    const action=Object.keys(state.keys).find(key=>state.keys[key].toLowerCase()===event.key.toLowerCase());
+    if(action)state.heldActions.delete(action);
+  });
+  window.addEventListener("blur",()=>{state.heldActions.clear();state.softDropAccumulator=0;});
 
   $("#keyGrid").addEventListener("click",event=>{const button=event.target.closest("button[data-action]");if(!button)return;listeningAction=button.dataset.action;button.textContent="Press a key…";button.classList.add("listening");});
   $("#settingsButton").addEventListener("click",()=>{$("#settingsDialog").showModal();buildKeyGrid();});
