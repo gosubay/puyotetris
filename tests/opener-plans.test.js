@@ -165,6 +165,13 @@ test("every selectable Tetris lesson has a complete reachable route", () => {
           return x < 0 || x >= 10 || py >= 22 || (py >= 0 && board[py][x]);
         });
         while (!collides(target.y + 1)) target.y++;
+      } else {
+        const coords = shape(type,rotation);
+        const blockedBelow = coords.some(([sx,sy]) => {
+          const x = target.x + sx, py = target.y + sy + 1;
+          return py >= 22 || (py >= 0 && board[py][x]);
+        });
+        assert.equal(blockedBelow,true,`${id} step ${index+1} (${type}) target must be a lockable resting position`);
       }
       assert.equal(canReach(board,type,target),true,`${id} step ${index+1} (${type}) must be SRS-reachable`);
       board = place(board,type,left,rotation,true,fixedY).board;
@@ -175,6 +182,31 @@ test("every selectable Tetris lesson has a complete reachable route", () => {
 test("MKO and Albatross fixed routes finish with a two-line clear", () => {
   assert.equal(build(openers.mko).cleared,2);
   assert.equal(build(openers.albatross).cleared,2);
+});
+
+test("PCO continues into bag 2 and ends in a Perfect Clear", () => {
+  const opener = openers.pco;
+  assert.equal(build(opener,7).cleared,0);
+  const complete = build(opener);
+  assert.equal(complete.cleared,4);
+  assert.deepEqual(occupiedRows(complete.board),[]);
+});
+
+test("DPC completes its TSD and the following Perfect Clear", () => {
+  const opener = openers.dpc;
+  assert.equal(build(opener,8).cleared,2);
+  const complete = build(opener);
+  assert.equal(complete.cleared,6);
+  assert.deepEqual(occupiedRows(complete.board),[]);
+});
+
+test("Gamushiro completes the taught TST then TSD route", () => {
+  const opener = openers.gamushiro;
+  assert.equal(build(opener,14).cleared,3);
+  const complete = build(opener);
+  assert.equal(build(opener,19).cleared,6);
+  assert.equal(complete.cleared,8);
+  assert.deepEqual(occupiedRows(complete.board),[]);
 });
 
 test("Hachispin places Z second-last and spins the final T for a Single", () => {

@@ -49,10 +49,10 @@
       ]
     },
     pco: {
-      variant: "Perfect Clear Opener · fixed first-bag form",
+      variant: "Perfect Clear Opener · complete 4-line PC",
       verified: true,
-      sequence: "ILOJSTZ",
-      plan: [[6,1,18],[7,0,20],[7,0,19],[7,2,17],[1,0,20],[0,1,19],[0,0,18]],
+      sequence: "ILOJSTZJTI",
+      plan: [[6,1,18],[7,0,20],[7,0,19],[7,2,17],[1,0,20],[0,1,19],[0,0,18],[3,3,19],[2,2,17],[5,1,18]],
       steps: [
         "Stand I in column 7; this keeps the entire setup inside four rows.",
         "Lay L along the bottom-right edge.",
@@ -60,33 +60,50 @@
         "Turn J upside down across the top-right shelf.",
         "Lay S across columns 2–4 on the floor.",
         "Stand T against the left wall to shape the compact side.",
-        "Lay Z across the top-left. The first-bag PCO rectangle is ready for a second-bag solve."
+        "Lay Z across the top-left to finish the first-bag PCO rectangle.",
+        "Start bag 2 by standing J in the centre gap.",
+        "Turn T upside down over J to close the left half.",
+        "Stand I in column 6 to complete the four-line Perfect Clear."
       ]
     },
     dpc: {
-      variant: "DPC prerequisite · extra-piece orientation drill",
+      variant: "DPC · extra-T MKO branch · TSD → PC",
       verified: true,
-      sequence: "ILOJSTZ",
-      plan: [[6,1,18],[7,0,20],[7,0,19],[7,2,17],[1,0,20],[0,1,19],[0,0,18]],
+      sequence: "ILOSZTJTILOSTZJ",
+      plan: [[0,1,18],[6,0,20],[6,0,19],[8,1,18],[4,1,19],[1,0,20],[1,1,18],[2,2,18],[9,1,18],[6,0,18],[0,0,18],[2,1,18],[4,2,19],[3,0,19],[5,2,19]],
       steps: [
-        "DPC begins after an 8-height perfect clear; this short drill first teaches the compact four-row base.",
-        "Lay L on the right without increasing the four-row ceiling.",
-        "Nest O over the L foot.",
-        "Turn J across the upper-right edge.",
-        "Keep S low on the left.",
-        "Stand T at the wall; in a real DPC cycle the leftover piece determines which branch follows.",
-        "Close the base with Z. This is the orientation prerequisite, not a claim that one fixed DPC solve covers every leftover piece."
+        "Stand the leftover I at the left wall for the extra-T MKO DPC branch.",
+        "Lay L across the lower-right.",
+        "Set O above the L foot.",
+        "Stand S at the right wall.",
+        "Stand Z in the centre to finish the DPC foundation.",
+        "Lay T over the lower-left shelf.",
+        "Stand J beside I with its foot pointing right.",
+        "Turn the next T upside down into the cavity for the T-Spin Double.",
+        "Stand I at the right wall to begin the Perfect Clear solve.",
+        "Lay L across the upper-right shelf.",
+        "Set O at the upper-left.",
+        "Stand S in the left-centre channel.",
+        "Turn T upside down across the lower middle.",
+        "Lay Z into the centre opening.",
+        "Turn J upside down to complete the four-line Perfect Clear."
       ]
     },
     gamushiro: {
-      variant: "Gamushiro · fixed first-bag foundation",
+      variant: "Gamushiro · full TST → TSD route",
       verified: true,
-      sequence: "IJOLSTZ",
-      plan: [[7,1,18],[0,0,20],[8,0,20],[8,1,17],[0,1,18],[5,3,19],[3,0,20]],
+      sequence: "IJOLSTZIJLOSZTJISLZT",
+      plan: [[7,1,18],[0,0,20],[8,0,20],[8,1,17],[0,1,18],[5,3,19],[3,0,20],[0,1,14],[1,1,16],[8,3,16],[8,0,14],[5,0,17],[3,0,18],[2,1,18],[3,2,18],[1,0,17],[5,1,17],[6,3,17],[3,1,19],[1,2,19]],
       steps: [
         "Stand I in column 8.", "Lay J in the bottom-left corner.", "Set O against the right wall.",
         "Stand L over I and O at the right edge.", "Stand S on the left to form the rising side.",
-        "Turn T counter-clockwise beside the I column.", "Lay Z in the centre to finish the fixed Gamushiro first bag."
+        "Turn T counter-clockwise beside the I column.", "Lay Z in the centre to finish the fixed Gamushiro first bag.",
+        "Start bag 2 by standing I at the left wall.", "Stand J beside I.", "Stand L at the right wall.",
+        "Set O above the right side.", "Lay S across the centre-right shelf.", "Lay Z across the centre.",
+        "Turn T clockwise into the left cavity for the T-Spin Triple.",
+        "Turn J upside down into the centre residue.", "Lay I across the upper-left.",
+        "Stand S in the centre-right channel.", "Stand L on the right.", "Stand Z in the lower centre.",
+        "Turn T upside down into the left cavity for the T-Spin Double."
       ]
     },
     hachispin: {
@@ -105,7 +122,7 @@
       variant: "MKO · fixed TSD route",
       verified: true,
       sequence: "IJLOSZT",
-      plan: [[9,1,16],[0,0,18],[4,0,18],[7,0,18],[0,1,16],[5,1,16],[2,2,17]],
+      plan: [[9,1,18],[0,0,20],[4,0,20],[7,0,20],[0,1,18],[5,1,18],[2,2,19]],
       steps: [
         "Stand I at the right wall.", "Lay J in the bottom-left.", "Lay L across the centre.",
         "Set O beside L.", "Stand S at the left wall.", "Stand Z above L to make the overhang.",
@@ -115,23 +132,24 @@
     albatross: {
       variant: "Albatross Special · fixed TSD route",
       verified: true,
-      sequence: "IJLOSZT",
-      plan: [[9,1,16],[6,2,16],[5,2,17],[3,0,18],[0,1,17],[3,0,16],[1,2,16]],
+      sequence: "ILJOSZT",
+      plan: [[9,1,18],[5,2,19],[6,2,18],[3,0,20],[0,1,19],[3,0,18],[1,2,18]],
       steps: [
-        "Stand I at the right wall.", "Turn J upside down across the upper-right.",
-        "Turn L upside down beneath J.", "Set O in the centre-left.", "Stand S at the left wall.",
+        "Stand I at the right wall.", "Turn L upside down across the lower-right.",
+        "Turn J upside down above L.", "Set O in the centre-left.", "Stand S at the left wall.",
         "Lay Z over O to form the Albatross overhang.", "Turn T upside down into the left cavity for the T-Spin Double."
       ]
     },
     "st-stack": {
-      variant: "ST/LST notch-spacing foundation",
+      variant: "T-base LST notch-spacing foundation",
       verified: true,
-      sequence: "IJLOTZS",
-      plan: [[9,1,15],[3,3,17],[0,1,17],[5,0,18],[7,0,18],[7,1,16],[5,0,16]],
+      sequence: "JLOTIZS",
+      plan: [[3,3,19],[0,1,19],[5,0,20],[7,0,20],[9,1,17],[7,1,18],[5,0,18]],
       steps: [
-        "Stand I at the right wall to mark the outside lane.", "Stand J in the centre-left.",
-        "Stand L at the left wall.", "Set O between J and the right lane.", "Lay T on the lower-right shelf.",
-        "Stand Z above the T side.", "Lay S across the centre. Notice the two-row notch spacing used by repeating ST-family stacks."
+        "Stand J in the centre-left.", "Stand L at the left wall.",
+        "Set O between J and the right lane.", "Lay T on the lower-right shelf.",
+        "Stand I at the right wall to mark the outside lane.", "Stand Z above the T side.",
+        "Lay S across the centre. This is the T-base LST foundation; it is no longer mislabeled as ordinary ST Stacking."
       ]
     },
     "6-3": {

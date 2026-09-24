@@ -477,7 +477,13 @@
       $("#coachState").style.color = "#63e59b";
       $("#instructionKicker").textContent = "LESSON COMPLETE";
       $("#instructionTitle").textContent = `${lesson.name} complete`;
-      $("#instructionText").textContent = lesson.id === "dt-cannon" ? "You built the cannon, cleared the T-Spin Double, and finished the T-Spin Triple." : `You completed the full guided ${lesson.name} sequence.`;
+      const completionMessages = {
+        "dt-cannon": "You built the cannon, cleared the T-Spin Double, and finished the T-Spin Triple.",
+        pco: "You completed the second-bag solve and cleared the whole board.",
+        dpc: "You cleared the DPC T-Spin Double and completed the following Perfect Clear.",
+        gamushiro: "You completed the full Gamushiro T-Spin Triple into T-Spin Double route."
+      };
+      $("#instructionText").textContent = completionMessages[lesson.id] || `You completed the full guided ${lesson.name} sequence.`;
       $("#placementText").textContent = "Restart the lesson to practise it again";
       $("#whyText").textContent = lesson.focus;
       return;
@@ -485,7 +491,11 @@
     $("#coachState").textContent = state.warning ? "CHECK MOVE" : "READY";
     $("#coachState").style.color = state.warning ? "#ffd45e" : "#63e59b";
     const step = state.step + 1;
-    const bagPhase = lesson.id === "dt-cannon" ? (step <= 7 ? "BAG 1" : step <= 14 ? "BAG 2" : "BAG 3 ATTACK") : "BAG 1";
+    const bagPhase = lesson.id === "dt-cannon" ? (step <= 7 ? "BAG 1" : step <= 14 ? "BAG 2" : "BAG 3 ATTACK")
+      : lesson.id === "pco" ? (step <= 7 ? "BAG 1" : "BAG 2 · PERFECT CLEAR")
+      : lesson.id === "dpc" ? (step <= 7 ? "DPC FOUNDATION" : step === 8 ? "T-SPIN DOUBLE" : "PERFECT CLEAR SOLVE")
+      : lesson.id === "gamushiro" ? (step <= 7 ? "BAG 1" : step <= 14 ? "BAG 2 · TST" : "BAG 3 · TSD")
+      : "BAG 1";
     $("#instructionKicker").textContent = state.mode === "play" ? "LIVE RECOMMENDATION" : `STEP ${step} · ${bagPhase}`;
     if (state.warning) {
       $("#instructionTitle").textContent = "This changes the formation";
