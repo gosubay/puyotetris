@@ -104,6 +104,12 @@ select { color: var(--text); background: #0b1c29; border: 1px solid var(--line);
 .speed-card span, .speed-card strong { display: block; }
 .speed-card strong { font-size: .82rem; margin-top: 3px; }
 .speed-card select { width: 108px; font-size: .78rem; padding: 8px; }
+.score-card { margin-top: 16px; padding: 14px; border: 1px solid rgba(79,224,255,.24); border-radius: 12px; background: rgba(11,32,46,.72); display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.score-card[hidden] { display: none; }
+.score-card div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.score-card span { color: var(--muted); font-size: .65rem; font-weight: 900; letter-spacing: .12em; }
+.score-card strong { font-size: 1rem; color: var(--cyan); }
+.score-card p { grid-column: 1 / -1; margin: 0; padding-top: 10px; border-top: 1px solid var(--line); color: #c4dae4; font-size: .78rem; }
 .restart-button { margin-top: 12px; width: 100%; padding: 10px; border: 1px solid var(--line); background: transparent; border-radius: 9px; cursor: pointer; color: #b9d3df; }
 
 .play-zone { padding: 24px 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; }

@@ -17,7 +17,7 @@
   };
   const PUYO_COLORS = { R: "#ff5470", G: "#58db78", B: "#4fa5ff", Y: "#ffd957" };
 
-  const { BASE_SHAPES, shape, kicksFor, samePlacement } = window.StackLabTetrisRules;
+  const { BASE_SHAPES, shape, kicksFor, samePlacement, classifyTSpin, guidelineScore } = window.StackLabTetrisRules;
   const verifiedOpeners = window.StackLabOpeners;
 
   const PUYO_PLANS = {
@@ -68,11 +68,11 @@
 
   function initTetris() {
     const lesson = activeLesson();
-    const queue = state.mode === "lesson" ? lesson.sequence.split("") : shuffle(Object.keys(BASE_SHAPES));
-    state.tetris = { board: emptyBoard(10, 22), queue, bag: [], hold: null, heldThisTurn: false, active: null, lockMs: 0, lines: 0 };
+    const route = verifiedOpeners[lesson.id];
+    const queue = state.mode === "lesson" ? (route?.queue || lesson.sequence).split("") : shuffle(Object.keys(BASE_SHAPES));
+    state.tetris = { board: emptyBoard(10, 22), queue, bag: [], hold: null, heldThisTurn: false, active: null, lockMs: 0, lines: 0, score: 0, combo: -1, b2b: false, lastClear: "No clears yet" };
     ensureTetrisQueue();
     spawnTetris();
-    if (state.mode === "play") updateTetrisRecommendation();
   }
 
   function ensureTetrisQueue() {
@@ -84,7 +84,7 @@
     const t = state.tetris;
     ensureTetrisQueue();
     const type = forcedType || t.queue.shift();
-    t.active = { type, x: 3, y: 0, rotation: 0 };
+    t.active = { type, x: 3, y: 0, rotation: 0, lastAction: "spawn", lastKickIndex: -1 };
     t.heldThisTurn = false;
     t.lockMs = 0;
     ensureTetrisQueue();
@@ -114,10 +114,15 @@
     return y;
   }
 
-  function moveTetris(dx, dy) {
+  function moveTetris(dx, dy, playerAction = true) {
     const p = state.tetris.active;
     if (!collidesTetris(p, dx, dy)) {
-      p.x += dx; p.y += dy; state.tetris.lockMs = 0; return true;
+      p.x += dx; p.y += dy;
+      if (playerAction) {
+        p.lastAction = "move"; p.lastKickIndex = -1;
+        if (dy > 0 && state.mode === "play") state.tetris.score += 1;
+      }
+      state.tetris.lockMs = 0; return true;
     }
     return false;
   }
@@ -126,9 +131,10 @@
     const p = state.tetris.active;
     const next = (p.rotation + direction + 4) % 4;
     const kicks = kicksFor(p.type, p.rotation, next);
-    for (const [dx,dy] of kicks) {
+    for (let kickIndex = 0; kickIndex < kicks.length; kickIndex++) {
+      const [dx,dy] = kicks[kickIndex];
       if (!collidesTetris(p, dx, dy, next)) {
-        p.x += dx; p.y += dy; p.rotation = next; state.tetris.lockMs = 0; return;
+        p.x += dx; p.y += dy; p.rotation = next; p.lastAction = "rotate"; p.lastKickIndex = kickIndex; state.tetris.lockMs = 0; return;
       }
     }
   }
@@ -147,6 +153,7 @@
     const expectedTarget = state.mode === "lesson" ? lessonTetrisTarget(true) : null;
     snapshot();
     const landedY = p.y;
+    const spin = classifyTSpin(t.board,p);
     for (const [x,y] of cellsFor(p)) if (y >= 0) t.board[y][x] = p.type;
     let cleared = 0;
     t.board = t.board.filter(row => {
@@ -155,6 +162,20 @@
     });
     while (t.board.length < 22) t.board.unshift(Array(10).fill(null));
     t.lines += cleared;
+
+    if (state.mode === "play") {
+      t.combo = cleared ? t.combo + 1 : -1;
+      const perfectClear = cleared > 0 && t.board.every(row => row.every(cell => !cell));
+      const result = guidelineScore({ lines: cleared, spin, backToBack: t.b2b, combo: t.combo, perfectClear });
+      t.score += result.points;
+      if (cleared) {
+        if (result.difficult) t.b2b = true;
+        else t.b2b = false;
+      }
+      const names = spin ? `T-Spin${spin === "mini" ? " Mini" : ""}` : ["","Single","Double","Triple","Tetris"][cleared];
+      t.lastClear = cleared ? `${names} · +${result.points.toLocaleString()}` : spin ? `${names} · +${result.points.toLocaleString()}` : "No line clear";
+      if (cleared || spin) showToast(t.lastClear);
+    }
 
     if (state.mode === "lesson") {
       const target = expectedTarget;
@@ -172,7 +193,7 @@
         showToast("Good placement");
       } else {
         const retry = state.undo.tetris;
-        retry.active = { type: p.type, x: 3, y: 0, rotation: 0 };
+        retry.active = { type: p.type, x: 3, y: 0, rotation: 0, lastAction: "spawn", lastKickIndex: -1 };
         retry.lockMs = 0;
         state.tetris = retry;
         state.undo = null;
@@ -185,12 +206,16 @@
       }
     }
     spawnTetris();
-    if (state.mode === "play") updateTetrisRecommendation();
     updateUI();
   }
 
   function hardDropTetris() {
-    state.tetris.active.y = ghostY(state.tetris.active);
+    const active = state.tetris.active;
+    const destination = ghostY(active);
+    const distance = destination - active.y;
+    if (state.mode === "play") state.tetris.score += distance * 2;
+    active.y = destination;
+    if (distance > 0) { active.lastAction = "move"; active.lastKickIndex = -1; }
     lockTetris();
   }
 
@@ -211,7 +236,7 @@
     const lesson = activeLesson();
     const plan = verifiedOpeners[lesson.id]?.plan || verifiedOpeners.tki.plan;
     const index = Math.min(state.step, plan.length - 1);
-    const type = beforeLock ? state.tetris.active.type : (lesson.sequence[index] || state.tetris.active.type);
+    const type = lesson.sequence[index] || state.tetris.active.type;
     const [xRaw, rotation, fixedY] = plan[index];
     const coords = shape(type, rotation);
     const minX = Math.min(...coords.map(p => p[0]));
@@ -262,15 +287,6 @@
     return best;
   }
 
-  function updateTetrisRecommendation() {
-    const q = [state.tetris.active.type, ...state.tetris.queue.slice(0,6)].join("");
-    if (state.tetris.lines > 0 || state.tetris.board.some(r => r.some(Boolean))) state.recommendation = "Clean 6–3 stack";
-    else if (q.indexOf("I") < 4) state.recommendation = "TKI opportunity";
-    else if (q.indexOf("O") < 3) state.recommendation = "Perfect Clear base";
-    else if (q.indexOf("L") < 3 || q.indexOf("J") < 3) state.recommendation = "MKO-style foundation";
-    else state.recommendation = "Flat stack into a TSD";
-  }
-
   function initPuyo() {
     const lesson = activeLesson();
     const pairs = [];
@@ -281,7 +297,6 @@
     while (pairs.length < 8) pairs.push(randomPuyoPair());
     state.puyo = { board: emptyBoard(6,13), queue: pairs, active: null, chains: 0, lockMs: 0 };
     spawnPuyo();
-    if (state.mode === "play") updatePuyoRecommendation();
   }
 
   function randomPuyoPair() {
@@ -345,7 +360,6 @@
       else { state.warning = "That pair changes the taught sequence. Undo to retry the highlighted placement."; showToast("Different placement — undo is available"); }
     }
     spawnPuyo();
-    if (state.mode === "play") updatePuyoRecommendation();
     updateUI();
   }
 
@@ -408,13 +422,6 @@
     return best || { x:2,y:puyoGhost(state.puyo.active),rotation:0 };
   }
 
-  function updatePuyoRecommendation() {
-    const [a,b] = state.puyo.active.colors;
-    if (a === b) state.recommendation = "Start a Stairs base";
-    else if (state.puyo.board.every(r => r.every(v => !v))) state.recommendation = "Start a GTR transition";
-    else state.recommendation = "Extend cleanly to the right";
-  }
-
   function undo() {
     if (!state.undo || state.undo.game !== state.game) return;
     state.mode = state.undo.mode; state.lessonIndex = state.undo.lessonIndex; state.step = state.undo.step;
@@ -439,9 +446,10 @@
 
   function setMode(mode) {
     state.mode = mode;
-    if (mode === "lesson") state.showHint = true;
+    state.showHint = mode === "lesson";
     $$(".mode-button").forEach(b => b.classList.toggle("active",b.dataset.mode === mode));
-    $(".lesson-picker-wrap").style.opacity = mode === "lesson" ? "1" : ".48";
+    $(".lesson-picker-wrap").hidden = mode !== "lesson";
+    $(".lesson-card").hidden = mode !== "lesson";
     $("#lessonPicker").disabled = mode !== "lesson";
     resetGame();
   }
@@ -481,7 +489,8 @@
         "dt-cannon": "You built the cannon, cleared the T-Spin Double, and finished the T-Spin Triple.",
         pco: "You completed the second-bag solve and cleared the whole board.",
         dpc: "You cleared the DPC T-Spin Double and completed the following Perfect Clear.",
-        gamushiro: "You completed the full Gamushiro T-Spin Triple into T-Spin Double route."
+        gamushiro: "You completed the full Gamushiro T-Spin Triple into T-Spin Double route.",
+        "t-spin-factory": "You completed three legal bags, used the taught hold swaps, and finished both T-Spin Doubles."
       };
       $("#instructionText").textContent = completionMessages[lesson.id] || `You completed the full guided ${lesson.name} sequence.`;
       $("#placementText").textContent = "Restart the lesson to practise it again";
@@ -495,16 +504,17 @@
       : lesson.id === "pco" ? (step <= 7 ? "BAG 1" : "BAG 2 · PERFECT CLEAR")
       : lesson.id === "dpc" ? (step <= 7 ? "DPC FOUNDATION" : step === 8 ? "T-SPIN DOUBLE" : "PERFECT CLEAR SOLVE")
       : lesson.id === "gamushiro" ? (step <= 7 ? "BAG 1" : step <= 14 ? "BAG 2 · TST" : "BAG 3 · TSD")
+      : lesson.id === "t-spin-factory" ? (step <= 7 ? "BAG 1 · FOUNDATION" : step <= 14 ? "BAG 2 · FIRST TSD" : "BAG 3 · SECOND TSD")
       : "BAG 1";
-    $("#instructionKicker").textContent = state.mode === "play" ? "LIVE RECOMMENDATION" : `STEP ${step} · ${bagPhase}`;
+    $("#instructionKicker").textContent = state.mode === "play" ? "FREE PLAY" : `STEP ${step} · ${bagPhase}`;
     if (state.warning) {
       $("#instructionTitle").textContent = "This changes the formation";
       $("#instructionText").textContent = state.warning;
       $("#placementText").textContent = "Same piece reset · match the colored target outline";
     } else if (state.mode === "play") {
-      $("#instructionTitle").textContent = state.recommendation || "Keep the stack clean";
-      $("#instructionText").textContent = isTetris ? "The hint favors low height, few holes, and a smooth surface." : "The hint favors matching neighbors while protecting space for a larger chain.";
-      $("#placementText").textContent = "Faint silhouette = landing · colored outline = recommendation";
+      $("#instructionTitle").textContent = isTetris ? "Play for score" : "Build your own chain";
+      $("#instructionText").textContent = isTetris ? "Use the normal landing ghost and choose every placement yourself. Singles, Tetrises, T-Spins, combos, back-to-back clears, drops, and Perfect Clears contribute to score." : "Free Play no longer changes opener advice during a game. Use it to practise your own decisions.";
+      $("#placementText").textContent = "Faint silhouette = current landing";
     } else {
       const target = isTetris ? lessonTetrisTarget() : lessonPuyoTarget();
       const opener = isTetris ? verifiedOpeners[lesson.id] : null;
@@ -515,18 +525,34 @@
       $("#instructionText").textContent = isTetris && opener ? opener.steps[Math.min(state.step,opener.steps.length-1)] : isTetris ? "Match the target position and orientation, then hard drop to confirm the step." : "Place this pair on the highlighted column in the shown orientation.";
       $("#placementText").textContent = isTetris ? "Faint silhouette = current landing · colored outline = lesson target" : "Dashed ghost = landing · outline = lesson target";
     }
-    $("#whyText").textContent = lesson.focus;
+    $("#whyText").textContent = state.mode === "play"
+      ? (isTetris ? "Free Play is deliberately non-prescriptive: it scores what you execute without changing opener advice mid-game." : "Free Play leaves the chain plan to you instead of pretending one changing recommendation can cover every color order.")
+      : lesson.focus;
   }
 
   function updateUI() {
     updateLessonCard(); updateCoach();
     const total = state.game === "tetris" ? activeLesson().sequence.length : activeLesson().colors.length/2;
-    $("#stepCounter").textContent = state.completed ? "COMPLETE" : state.mode === "lesson" ? `STEP ${Math.min(state.step+1,total)} / ${total}` : "ADAPTIVE GUIDE";
-    $("#modeStatus").textContent = state.completed ? "LESSON FINISHED" : state.mode === "lesson" ? "GUIDED OPENER" : "RANDOM PLAY";
+    $("#stepCounter").textContent = state.completed ? "COMPLETE" : state.mode === "lesson" ? `STEP ${Math.min(state.step+1,total)} / ${total}` : "SCORE ATTACK";
+    $("#modeStatus").textContent = state.completed ? "LESSON FINISHED" : state.mode === "lesson" ? "GUIDED OPENER" : "FREE PLAY";
     $("#speedLabel").textContent = state.speed === 0 ? "No automatic fall" : `${state.speed}× thinking time`;
+    $("#restartButton").textContent = state.mode === "play" ? "↻ Restart free play" : "↻ Restart lesson";
     $("#holdKey").textContent = displayKey(state.keys.hold);
     $("#hintButton").classList.toggle("active",state.showHint);
     $("#hintButtonLabel").textContent = state.showHint ? "Hide guide" : "Show guide";
+    $("#hintButton").disabled = state.mode === "play";
+    $("#hintButton").hidden = state.mode === "play";
+    $(".coach-tip").hidden = state.mode === "play";
+    $("#hintButton").title = state.mode === "play" ? "Free Play uses only the normal landing ghost" : "Show or hide the lesson target";
+    const showScore = state.mode === "play" && state.game === "tetris";
+    $("#scoreCard").hidden = !showScore;
+    if (showScore && state.tetris) {
+      $("#scoreValue").textContent = state.tetris.score.toLocaleString();
+      $("#linesValue").textContent = state.tetris.lines;
+      $("#comboValue").textContent = state.tetris.combo > 0 ? `×${state.tetris.combo + 1}` : "—";
+      $("#b2bValue").textContent = state.tetris.b2b ? "ON" : "—";
+      $("#clearValue").textContent = state.tetris.lastClear;
+    }
     // Pausing freezes play without covering or softening the board. The header
     // button is the only pause-state indicator; the overlay is reserved for a
     // completed lesson.
@@ -610,7 +636,7 @@
     }
     const gy = ghostY(t.active);
     for (const [sx,sy] of shape(t.active.type,t.active.rotation)) if (gy+sy>=2) drawGhostCell(ctx,(t.active.x+sx)*cell,(gy+sy-2)*cell,cell,TETRIS_COLORS[t.active.type]);
-    const hint = state.mode === "lesson" ? lessonTetrisTarget() : bestTetrisPlacement();
+    const hint = state.mode === "lesson" ? lessonTetrisTarget() : null;
     if (state.showHint && hint && hint.type === t.active.type) {
       const aligned = samePlacement({ ...t.active, y: gy },hint);
       for (const [sx,sy] of shape(hint.type,hint.rotation)) if (hint.y+sy>=2) drawGuideCell(ctx,(hint.x+sx)*cell,(hint.y+sy-2)*cell,cell,TETRIS_COLORS[hint.type],aligned);
@@ -666,7 +692,7 @@
     const currentGhostY=puyoGhost(p.active);
     const currentGhost={...p.active,y:currentGhostY};
     puyoCells(currentGhost).forEach(([x,y,c])=>{if(y>=1)drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.45,PUYO_COLORS[c],.38,true);});
-    const hint=state.mode==="lesson"?lessonPuyoTarget():bestPuyoPlacement();
+    const hint=state.mode==="lesson"?lessonPuyoTarget():null;
     if(state.showHint&&hint){const probe={...p.active,x:hint.x,y:hint.y,rotation:hint.rotation};puyoCells(probe).forEach(([x,y,c])=>{if(y>=1)drawPuyoGuideCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.45,PUYO_COLORS[c]);});}
     puyoCells(p.active).forEach(([x,y,c])=>{if(y>=1)drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.46,PUYO_COLORS[c]);});
     drawMiniPuyo(holdCtx,null,100,86);
@@ -696,7 +722,7 @@
         state.softDropAccumulator+=delta;
         while(state.softDropAccumulator>=SOFT_DROP_INTERVAL){
           state.softDropAccumulator-=SOFT_DROP_INTERVAL;
-          if(state.game==="tetris")moveTetris(0,1);else movePuyo(0,1);
+          if(state.game==="tetris")moveTetris(0,1,true);else movePuyo(0,1);
         }
       }else state.softDropAccumulator=0;
 
@@ -704,7 +730,7 @@
         state.fallAccumulator+=delta;
         if(state.fallAccumulator>=gravityInterval()){
           state.fallAccumulator-=gravityInterval();
-          if(state.game==="tetris")moveTetris(0,1);else movePuyo(0,1);
+          if(state.game==="tetris")moveTetris(0,1,false);else movePuyo(0,1);
         }
 
         if(state.game==="tetris"){
@@ -727,7 +753,10 @@
     if(state.completed){if(action==="undo")undo();return;}
     if(action==="pause"){togglePause();return;}
     if(state.paused)return;
-    if(action==="hint"){state.showHint=!state.showHint;updateUI();showToast(state.showHint?"Guide target shown":"Guide target hidden");return;}
+    if(action==="hint"){
+      if(state.mode === "play"){showToast("Free Play uses only the landing ghost");return;}
+      state.showHint=!state.showHint;updateUI();showToast(state.showHint?"Guide target shown":"Guide target hidden");return;
+    }
     if(action==="undo"){undo();return;}
     if(state.game==="tetris"){
       if(action==="left")moveTetris(-1,0);if(action==="right")moveTetris(1,0);if(action==="softDrop")moveTetris(0,1);

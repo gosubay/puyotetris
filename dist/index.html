@@ -8,7 +8,7 @@
     <title>Stack Lab — Tetris & Puyo Trainer</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308141f'/%3E%3Cpath d='M12 16h16v16H12zm16 16h16v16H28zm16-16h8v16h-8z' fill='%234fe0ff'/%3E%3Ccircle cx='18' cy='47' r='8' fill='%23ff4d7d'/%3E%3C/svg%3E" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <link rel="stylesheet" href="./styles.css?v=20260923-4" />
+    <link rel="stylesheet" href="./styles.css?v=20260924-2" />
   </head>
   <body>
     <div class="app-shell">
@@ -36,7 +36,7 @@
           <div class="eyebrow">TRAINING MODE</div>
           <div class="segmented" role="group" aria-label="Training mode">
             <button class="mode-button active" type="button" data-mode="lesson">Opener</button>
-            <button class="mode-button" type="button" data-mode="play">Random play</button>
+            <button class="mode-button" type="button" data-mode="play">Free play</button>
           </div>
 
           <div class="field-group lesson-picker-wrap">
@@ -68,6 +68,14 @@
               <option value="0">Untimed</option>
             </select>
           </div>
+
+          <section class="score-card" id="scoreCard" hidden aria-label="Free play score">
+            <div><span>SCORE</span><strong id="scoreValue">0</strong></div>
+            <div><span>LINES</span><strong id="linesValue">0</strong></div>
+            <div><span>COMBO</span><strong id="comboValue">—</strong></div>
+            <div><span>B2B</span><strong id="b2bValue">—</strong></div>
+            <p id="clearValue">Build cleanly and score T-Spins</p>
+          </section>
 
           <button class="restart-button" id="restartButton" type="button">↻ Restart lesson</button>
         </aside>
@@ -150,9 +158,9 @@
       </form>
     </dialog>
 
-    <script src="./tetris-rules.js?v=20260924-1"></script>
-    <script src="./opener-data.js?v=20260924-1"></script>
-    <script src="./lessons.js?v=20260924-1"></script>
-    <script src="./app.js?v=20260924-1"></script>
+    <script src="./tetris-rules.js?v=20260924-2"></script>
+    <script src="./opener-data.js?v=20260924-2"></script>
+    <script src="./lessons.js?v=20260924-2"></script>
+    <script src="./app.js?v=20260924-2"></script>
   </body>
 </html>

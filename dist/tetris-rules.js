@@ -68,5 +68,30 @@
     return a.length === b.length && a.every(([x,y],index) => x === b[index][0] && y === b[index][1]);
   }
 
-  return { BASE_SHAPES, shape, kicksFor, occupiedCells, samePlacement };
+  function classifyTSpin(board, piece) {
+    if (!piece || piece.type !== "T" || piece.lastAction !== "rotate") return null;
+    const pivotX = piece.x + 1, pivotY = piece.y + 1;
+    const occupied = (x,y) => x < 0 || x >= 10 || y < 0 || y >= board.length || Boolean(board[y][x]);
+    const corners = [[-1,-1],[1,-1],[-1,1],[1,1]];
+    if (corners.filter(([dx,dy]) => occupied(pivotX+dx,pivotY+dy)).length < 3) return null;
+    const front = [
+      [[-1,-1],[1,-1]], [[1,-1],[1,1]], [[-1,1],[1,1]], [[-1,-1],[-1,1]]
+    ][((piece.rotation % 4) + 4) % 4];
+    const full = front.every(([dx,dy]) => occupied(pivotX+dx,pivotY+dy)) || piece.lastKickIndex === 4;
+    return full ? "full" : "mini";
+  }
+
+  function guidelineScore({ lines = 0, spin = null, backToBack = false, combo = -1, perfectClear = false, level = 1 }) {
+    const normal = [0,100,300,500,800];
+    const fullSpin = [400,800,1200,1600];
+    const miniSpin = [100,200,400];
+    let base = spin === "full" ? (fullSpin[lines] || 0) : spin === "mini" ? (miniSpin[lines] || 0) : (normal[lines] || 0);
+    const difficult = lines > 0 && (spin !== null || lines === 4);
+    if (difficult && backToBack) base = Math.floor(base * 1.5);
+    const comboBonus = lines > 0 && combo > 0 ? 50 * combo : 0;
+    const pc = perfectClear ? ([0,800,1200,1800,backToBack ? 3200 : 2000][lines] || 0) : 0;
+    return { points: (base + comboBonus + pc) * level, difficult };
+  }
+
+  return { BASE_SHAPES, shape, kicksFor, occupiedCells, samePlacement, classifyTSpin, guidelineScore };
 });

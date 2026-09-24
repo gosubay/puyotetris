@@ -118,6 +118,40 @@
         "Turn T upside down and rotate it into the right-side cavity for the T-Spin Single."
       ]
     },
+    "t-spin-factory": {
+      variant: "T-Spin Factory · three-bag TSD drill",
+      verified: true,
+      sequence: "TIJLOSZLSIOJZTLISOZJT",
+      queue: "TSIJLOZTLSIOJZLTISOZJ",
+      plan: [
+        [0,2,19],[9,1,18],[0,1,17],[7,3,19],[6,0,20],[4,0,19],[1,1,17],
+        [6,0,17],[6,0,16],[9,3,14],[7,0,14],[0,0,15],[0,0,14],[2,2,18],
+        [2,0,20],[5,1,18],[5,3,16],[8,0,14],[6,3,14],[0,2,14],[3,1,18]
+      ],
+      steps: [
+        "Turn T upside down at the far left. The early T starts the factory foundation.",
+        "Hold the S, then stand I at the right wall.",
+        "Stand J at the far left with its hook across the top.",
+        "Turn L counter-clockwise beside the I column.",
+        "Set O below the L on the right.",
+        "Swap the waiting Z for the held S, then hang S horizontally over O.",
+        "Hold the first T of bag 2 and use the saved Z vertically between J and the centre.",
+        "Lay L across the upper-right shelf.",
+        "Lay S directly above L.",
+        "Turn I counter-clockwise and stand it at the right wall.",
+        "Set O high on the right shelf.",
+        "Lay J across the upper-left.",
+        "Lay Z above J to close the roof.",
+        "Swap the first piece of bag 3 for the held T, then rotate T into the left cavity for a T-Spin Double.",
+        "Use hold again to recover L and lay it across the bottom-centre residue.",
+        "Swap for I and stand it in the centre channel.",
+        "Turn S counter-clockwise into the upper centre-right.",
+        "Set O on the upper-right shelf.",
+        "Turn Z counter-clockwise beside O.",
+        "Turn J upside down across the upper-left.",
+        "Swap for the held T and rotate it clockwise into the cavity for the second T-Spin Double."
+      ]
+    },
     mko: {
       variant: "MKO · fixed TSD route",
       verified: true,

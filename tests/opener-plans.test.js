@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { shape, kicksFor, samePlacement } = require("../dist/tetris-rules.js");
+const { shape, kicksFor, samePlacement, classifyTSpin, guidelineScore } = require("../dist/tetris-rules.js");
 const openers = require("../dist/opener-data.js");
 
 function emptyBoard() {
@@ -214,6 +214,40 @@ test("Hachispin places Z second-last and spins the final T for a Single", () => 
   assert.equal(opener.sequence.slice(-2),"ZT");
   assert.equal(build(opener,opener.sequence.length-1).cleared,0);
   assert.equal(build(opener).cleared,1);
+});
+
+test("T-Spin Factory uses three legal bags and completes two TSDs", () => {
+  const opener = openers["t-spin-factory"];
+  assert.equal(opener.sequence.length,21);
+  assert.equal(opener.queue.length,21);
+  for (let start=0; start<21; start+=7) {
+    assert.equal([...opener.queue.slice(start,start+7)].sort().join(""),"IJLOSTZ");
+  }
+  assert.deepEqual(occupiedRows(build(opener,7).board),[
+    "JJZ_______","JZZ______I","JZ___SSLLI","TTT_SSOOLI","_T____OOLI"
+  ]);
+  assert.equal(build(opener,14).cleared,2);
+  assert.equal(build(opener).cleared,4);
+  const queue = [...opener.queue,"X"];
+  let active = queue.shift(), held = null;
+  for (const expected of opener.sequence) {
+    if (active !== expected) {
+      const previous = held;
+      held = active;
+      active = previous || queue.shift();
+    }
+    assert.equal(active,expected,`hold route must supply ${expected}`);
+    active = queue.shift();
+  }
+});
+
+test("Guideline-style score covers T-Spins, B2B, combos, and Perfect Clears", () => {
+  assert.deepEqual(guidelineScore({lines:2,spin:"full",backToBack:false,combo:0}),{points:1200,difficult:true});
+  assert.deepEqual(guidelineScore({lines:2,spin:"full",backToBack:true,combo:1}),{points:1850,difficult:true});
+  assert.deepEqual(guidelineScore({lines:4,backToBack:false,combo:0,perfectClear:true}),{points:2800,difficult:true});
+  const board=emptyBoard();
+  board[19][2]="J"; board[19][4]="J"; board[21][2]="J";
+  assert.equal(classifyTSpin(board,{type:"T",x:2,y:19,rotation:0,lastAction:"rotate",lastKickIndex:0}),"full");
 });
 
 test("6–3 clean-stacking drill remains hole-free", () => {
