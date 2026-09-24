@@ -220,6 +220,9 @@ test("T-Spin Factory uses three legal bags and completes two TSDs", () => {
   const opener = openers["t-spin-factory"];
   assert.equal(opener.sequence.length,21);
   assert.equal(opener.queue.length,21);
+  assert.equal(opener.sequence.slice(0,7),"TIJLOZS","Z must be placed before the held S");
+  assert.equal(opener.sequence.slice(7,14),"JZILOST");
+  assert.equal(opener.sequence.slice(14),"JZILOST","the higher cycle must repeat the same build order");
   for (let start=0; start<21; start+=7) {
     assert.equal([...opener.queue.slice(start,start+7)].sort().join(""),"IJLOSTZ");
   }
@@ -228,6 +231,9 @@ test("T-Spin Factory uses three legal bags and completes two TSDs", () => {
   ]);
   assert.equal(build(opener,14).cleared,2);
   assert.equal(build(opener).cleared,4);
+  assert.deepEqual(opener.plan.slice(7,14).map(([left,rotation])=>[left,rotation]),
+    opener.plan.slice(14).map(([left,rotation])=>[left,rotation]),
+    "later cycles must use the same columns and orientations");
   const queue = [...opener.queue,"X"];
   let active = queue.shift(), held = null;
   for (const expected of opener.sequence) {
