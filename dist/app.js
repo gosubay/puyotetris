@@ -535,7 +535,7 @@
     const total = state.game === "tetris" ? activeLesson().sequence.length : activeLesson().colors.length/2;
     $("#stepCounter").textContent = state.completed ? "COMPLETE" : state.mode === "lesson" ? `STEP ${Math.min(state.step+1,total)} / ${total}` : "SCORE ATTACK";
     $("#modeStatus").textContent = state.completed ? "LESSON FINISHED" : state.mode === "lesson" ? "GUIDED OPENER" : "FREE PLAY";
-    $("#speedLabel").textContent = state.speed === 0 ? "No automatic fall" : `${state.speed}× thinking time`;
+    $("#speedLabel").textContent = state.speed === 0 ? "No automatic fall" : state.speed === 1 ? "Regular fall speed" : `${state.speed}× thinking time`;
     $("#restartButton").textContent = state.mode === "play" ? "↻ Restart free play" : "↻ Restart lesson";
     $("#holdKey").textContent = displayKey(state.keys.hold);
     $("#hintButton").classList.toggle("active",state.showHint);
@@ -710,7 +710,7 @@
 
   function draw() { if(state.game==="tetris"&&state.tetris)drawTetris(); else if(state.puyo)drawPuyo(); }
 
-  function gravityInterval() { return state.speed===0?Infinity:(state.speed===10?2000:1000); }
+  function gravityInterval() { return state.speed===0 ? Infinity : state.speed===1 ? 200 : state.speed===10 ? 2000 : 1000; }
 
   const SOFT_DROP_INTERVAL = 45;
   const LOCK_DELAY = 500;
