@@ -157,6 +157,19 @@ select { color: var(--text); background: #0b1c29; border: 1px solid var(--line);
 .coach-tip { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; color: var(--muted); font-size: .82rem; }
 
 dialog { color: var(--text); background: transparent; border: 0; padding: 0; }
+.drill-controls, .drill-review { margin-top: 18px; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: rgba(79,224,255,.04); }
+.drill-controls > label:first-child { display: block; font-size: .7rem; font-weight: 800; letter-spacing: .12em; margin-bottom: 8px; color: var(--cyan); }
+.drill-controls select { width: 100%; }
+.mirror-option { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: .85rem; }
+.drill-controls button, .drill-review button { border: 1px solid var(--line); border-radius: 8px; background: #10293b; padding: 9px 12px; cursor: pointer; }
+.drill-controls button:hover, .drill-review button:hover { border-color: var(--cyan); }
+.drill-controls p, .drill-review p { font-size: .82rem; color: var(--muted); }
+.drill-controls .drill-note { font-size: .75rem; line-height: 1.5; }
+.drill-review strong { color: var(--green); }
+.replay-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.drill-review button:disabled { opacity: .4; cursor: default; }
+.drill-source { display: inline-block; margin-top: 16px; color: var(--cyan); font-size: .8rem; }
+[hidden] { display: none !important; }
 dialog::backdrop { background: rgba(2,8,13,.76); backdrop-filter: blur(5px); }
 .settings-card { width: min(92vw, 560px); background: #0b1d2a; border: 1px solid rgba(79,224,255,.25); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); }
 .dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; }
