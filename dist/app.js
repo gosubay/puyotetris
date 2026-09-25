@@ -2,6 +2,12 @@
   "use strict";
 
   const lessons = window.STACK_LAB_LESSONS;
+  const puyoRules = window.StackLabPuyo;
+  const gameSpeeds = {tetris:5,puyo:0};
+  let drillPermutation = ["R","G","B","Y"];
+  let drillAwarded = false;
+  let drillAssisted = false;
+  function isDrill() { return state.game === "puyo" && state.mode === "lesson"; }
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -19,15 +25,6 @@
 
   const { BASE_SHAPES, shape, kicksFor, samePlacement, classifyTSpin, guidelineScore } = window.StackLabTetrisRules;
   const verifiedOpeners = window.StackLabOpeners;
-
-  const PUYO_PLANS = {
-    gtr: [[0,1],[1,0],[2,1],[0,0],[1,1],[3,0],[2,0],[4,1]],
-    stairs: [[0,0],[1,0],[1,1],[2,0],[2,1],[3,0],[3,1],[4,0]],
-    sandwich: [[0,1],[1,0],[0,0],[2,1],[1,0],[3,1],[2,0],[4,0]],
-    "gtr-extension": [[0,1],[1,0],[2,1],[3,0],[4,1],[2,0],[5,0],[4,0]],
-    tailing: [[5,0],[4,1],[3,0],[5,0],[4,0],[2,1],[3,0],[1,0]],
-    transition: [[0,1],[1,0],[2,0],[1,1],[3,0],[2,1],[4,0],[5,0]]
-  };
 
   const DEFAULT_KEYS = {
     left: "ArrowLeft", right: "ArrowRight", softDrop: "ArrowDown", hardDrop: "ArrowUp",
@@ -288,14 +285,12 @@
   }
 
   function initPuyo() {
-    const lesson = activeLesson();
-    const pairs = [];
-    if (state.mode === "lesson") {
-      const colors = lesson.colors;
-      for (let i = 0; i < colors.length; i += 2) pairs.push([colors[i], colors[i+1]]);
-    }
-    while (pairs.length < 8) pairs.push(randomPuyoPair());
-    state.puyo = { board: emptyBoard(6,13), queue: pairs, active: null, chains: 0, lockMs: 0 };
+    const drill = isDrill() ? puyoRules.variant(activeLesson().id,drillPermutation,$("#mirrorDrill").checked) : null;
+    const pairs = drill ? drill.moves.map(m=>[...m.pair]) : [];
+    state.puyo = { board: drill ? puyoRules.copy(drill.initial) : emptyBoard(6,13), queue: pairs, active: null, chains: 0, lockMs: 0, drill, replay:null, replayIndex:0 };
+    drillAwarded = false;
+    drillAssisted = $("#drillStyle").value === "guided";
+    if(drill) state.showHint = drillAssisted;
     spawnPuyo();
   }
 
@@ -306,9 +301,14 @@
 
   function spawnPuyo() {
     const p = state.puyo;
-    while (p.queue.length < 7) p.queue.push(randomPuyoPair());
+    if(!p.drill) while (p.queue.length < 7) p.queue.push(randomPuyoPair());
+    if(!p.queue.length) { p.active=null; return; }
     p.active = { colors: p.queue.shift(), x: 2, y: 1, rotation: 0 };
     p.lockMs = 0;
+    if(collidesPuyo(p.active)) {
+      p.active=null; state.completed=true; state.warning="Board full. Restart free play.";
+      showToast("Board full — restart to play again");
+    }
     updateCoach();
   }
 
@@ -343,6 +343,8 @@
 
   function lockPuyo() {
     const p = state.puyo, pair = p.active;
+    if(!pair) return;
+    if(p.drill) { lockPuyoDrill(); return; }
     const expectedTarget = state.mode === "lesson" ? lessonPuyoTarget() : null;
     snapshot();
     const landed = { x: pair.x, y: pair.y, rotation: pair.rotation };
@@ -364,62 +366,105 @@
   }
 
   function resolvePuyoChains() {
-    const board = state.puyo.board;
-    let chain = 0;
-    while (true) {
-      const remove = new Set();
-      const seen = new Set();
-      for (let y=0;y<13;y++) for (let x=0;x<6;x++) {
-        const color = board[y][x], key = `${x},${y}`;
-        if (!color || seen.has(key)) continue;
-        const group = [], stack = [[x,y]]; seen.add(key);
-        while (stack.length) {
-          const [cx,cy] = stack.pop(); group.push([cx,cy]);
-          for (const [nx,ny] of [[cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]]) {
-            const nk = `${nx},${ny}`;
-            if (nx>=0&&nx<6&&ny>=0&&ny<13&&!seen.has(nk)&&board[ny][nx]===color) { seen.add(nk); stack.push([nx,ny]); }
-          }
-        }
-        if (group.length >= 4) group.forEach(([gx,gy]) => remove.add(`${gx},${gy}`));
-      }
-      if (!remove.size) break;
-      chain++;
-      remove.forEach(key => { const [x,y] = key.split(",").map(Number); board[y][x] = null; });
-      for (let x=0;x<6;x++) {
-        const values = [];
-        for (let y=12;y>=0;y--) if (board[y][x]) values.push(board[y][x]);
-        for (let y=12,i=0;y>=0;y--,i++) board[y][x] = values[i] || null;
-      }
+    const result=puyoRules.resolve(state.puyo.board);
+    state.puyo.board=result.board;
+    if(result.chains) {
+      state.puyo.chains=Math.max(state.puyo.chains,result.chains);
+      showToast(result.chains + "-chain!");
     }
-    if (chain) { state.puyo.chains = Math.max(state.puyo.chains,chain); showToast(`${chain}-chain!`); }
   }
 
   function hardDropPuyo() { state.puyo.active.y = puyoGhost(state.puyo.active); lockPuyo(); }
 
   function lessonPuyoTarget() {
-    const plan = PUYO_PLANS[activeLesson().id] || PUYO_PLANS.gtr;
-    const [x,rotation] = plan[Math.min(state.step,plan.length-1)];
-    const probe = { ...state.puyo.active, x, rotation, y: 1 };
-    return { x, rotation, y: puyoGhost(probe) };
+    if(state.puyo.drill) {
+      const move=state.puyo.drill.moves[state.step];
+      if(!move||!state.puyo.active) return null;
+      const probe={...state.puyo.active,x:move.x,rotation:move.r,y:1};
+      return {x:move.x,rotation:move.r,y:puyoGhost(probe)};
+    }
+    return null;
   }
 
-  function bestPuyoPlacement() {
-    let best = null;
-    for (let r=0;r<4;r++) for (let x=0;x<6;x++) {
-      const probe = { ...state.puyo.active, x, y:1, rotation:r };
-      if (collidesPuyo(probe,0,0,r)) continue;
-      const y = puyoGhost(probe);
-      const cells = puyoCells(probe,x,y,r);
-      let adjacency = 0, heightPenalty = 0;
-      for (const [cx,cy,color] of cells) {
-        heightPenalty += (13-cy) * .2;
-        for (const [nx,ny] of [[cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]]) if (ny>=0&&ny<13&&nx>=0&&nx<6&&state.puyo.board[ny][nx]===color) adjacency += 3;
-      }
-      const edgeBonus = x < 3 ? .5 : 0;
-      const score = adjacency + edgeBonus - heightPenalty;
-      if (!best || score > best.score) best = { x,y,rotation:r,score };
+  function lockPuyoDrill() {
+    const p=state.puyo, active=p.active, move=p.drill.moves[state.step];
+    const actual=puyoRules.place(p.board,active.colors,active.x,active.rotation);
+    const expected=puyoRules.place(p.board,active.colors,move.x,move.r);
+    const last=state.step===p.drill.moves.length-1;
+    // Compare resulting cells, not pivot/orientation: identical doubles and split
+    // pairs can reach the same board with different controls.
+    const correct=actual && (last ? actual.chains===p.drill.goal :
+      actual.chains===0 && expected && JSON.stringify(actual.board)===JSON.stringify(expected.board));
+    if(!correct) {
+      state.warning=actual?.chains ? `That fires a ${actual.chains}-chain too early or misses the ${p.drill.goal}-chain goal. The same pair is ready to retry.` :
+        "That placement does not match this drill's taught formation. It may work in another chain. Retry this pair, or press H for a hint.";
+      p.active={...active,x:2,y:1,rotation:0};p.lockMs=0;
+      showToast("Same pair · try again");updateUI();return;
     }
-    return best || { x:2,y:puyoGhost(state.puyo.active),rotation:0 };
+    snapshot();state.warning="";state.step++;p.board=actual.board;p.chains=actual.chains;
+    if(last) {
+      state.completed=true;p.active=null;
+      p.replay=[];
+      const names={R:"red",G:"green",B:"blue",Y:"yellow"};
+      actual.frames.forEach((f,i)=>{
+        const colors=[...new Set(f.cleared.map(([x,y])=>names[f.before[y][x]]))].join(" + ");
+        p.replay.push({board:f.before,cleared:f.cleared,text:`Link ${i+1}: ${f.cleared.length} ${colors} puyos clear. White rings mark the connected group.`});
+        p.replay.push({board:f.after,text:i===actual.frames.length-1 ? `${actual.chains}-chain complete. The remaining puyos are outside this drill's chain.` : `After link ${i+1}: gravity joins the next group. Choose Next to inspect it.`});
+      });
+      p.replayIndex=0;
+      if(!drillAwarded) {
+        const progress=readDrillProgress();
+        const item=progress[p.drill.id] || {clears:0,recall:0};
+        item.clears++;if(!drillAssisted)item.recall++;
+        progress[p.drill.id]=item;
+        try {localStorage.setItem("stackLabPuyoProgress",JSON.stringify(progress));}catch {}
+        drillAwarded=true;
+      }
+      showToast(`${actual.chains}-chain verified · inspect the replay`);
+    } else {spawnPuyo();showToast("Formation preserved");}
+    updateUI();
+  }
+
+  function readDrillProgress() {
+    try {
+      const data=JSON.parse(localStorage.getItem("stackLabPuyoProgress")||"{}");
+      return data && typeof data==="object" && !Array.isArray(data) ? data : {};
+    } catch {return {};}
+  }
+
+  function updateDrillCoach() {
+    const p=state.puyo;if(!p?.drill)return;
+    const drill=p.drill, move=drill.moves[state.step];
+    $("#currentPieceName").textContent=(p.active?.colors||[]).join(" + ") || "CHAIN REPLAY";
+    $("#coachState").textContent=state.completed?"VERIFIED":state.warning?"TRY AGAIN":"READY";
+    $("#coachState").style.color=state.warning?"#ffd45e":"#63e59b";
+    $("#instructionKicker").textContent=state.completed?`${drill.goal}-CHAIN COMPLETE`:`PAIR ${state.step+1} OF ${drill.moves.length}`;
+    $("#instructionTitle").textContent=state.completed?"Follow the chain below":state.warning?"Retry the same pair":state.showHint?"Build the highlighted connection":"Find the next placement";
+    $("#instructionText").textContent=state.warning || (state.completed?"Use the replay controls to see each clear and the drop that connects the next link.":state.showHint?move.text:`Keep the ${drill.family === "gtr"?"GTR transition":"Sandwich links"} intact and finish with a ${drill.goal}-chain. Press H if you need the taught placement.`);
+    $("#placementText").textContent=state.completed?"White rings = the group clearing next":state.showHint?"Bright outline = taught placement · dashed circles = landing":"Recall practice · placement guide hidden";
+    $("#whyText").textContent=drill.focus;
+  }
+
+  function updateDrillUI() {
+    const active=isDrill(), p=state.puyo;
+    $("#drillControls").hidden=!active;
+    $("#drillSource").hidden=!active;
+    $("#drillReview").hidden=!(active&&p?.replay);
+    $(".hold-rail").style.visibility=state.game==="puyo"?"hidden":"visible";
+    $("[data-mode='lesson']").textContent=state.game==="puyo"?"Drills":"Opener";
+    if(!active)return;
+    const drill=p.drill, progress=readDrillProgress()[drill.id]||{clears:0,recall:0};
+    $("#drillProgress").textContent=`${progress.clears} completed · ${progress.recall} without hints`;
+    $("#drillSource").href=drill.source;
+    $("#modeStatus").textContent=state.completed?"CHAIN VERIFIED":$("#drillStyle").value==="recall"?"RECALL DRILL":"GUIDED DRILL";
+    $("#hintButton").disabled=state.completed;
+    $("#nextDrill").textContent=state.lessonIndex===lessons.puyo.length-1?"Back to first drill":"Next drill";
+    if(p.replay) {
+      $("#drillResult").textContent=`✓ ${p.chains}-chain · ${drillAssisted?"guided":"without hints"}`;
+      $("#replayText").textContent=p.replay[p.replayIndex].text;
+      $("#replayPrev").disabled=p.replayIndex===0;
+      $("#replayNext").disabled=p.replayIndex===p.replay.length-1;
+    }
   }
 
   function undo() {
@@ -439,7 +484,9 @@
 
   function setGame(game) {
     if (state.game === game) return;
+    gameSpeeds[state.game]=state.speed;
     state.game = game; state.lessonIndex = 0;
+    state.speed=gameSpeeds[game];$("#speedPicker").value=String(state.speed);
     $$(".game-tab").forEach(b => { const active = b.dataset.game === game; b.classList.toggle("active",active); b.setAttribute("aria-selected",active); });
     populateLessons(); resetGame();
   }
@@ -473,13 +520,24 @@
     $("#lessonTitle").textContent = lesson.name;
     $("#lessonDescription").textContent = lesson.description;
     $("#lessonCondition").textContent = lesson.condition;
+    $("#conditionLabel").textContent = state.game === "puyo" ? "GOAL" : "START WHEN";
   }
 
   function updateCoach() {
+    if(isDrill()) { updateDrillCoach(); return; }
     const lesson = activeLesson();
     const isTetris = state.game === "tetris";
     const pieceName = isTetris ? `${state.tetris?.active?.type || "—"} TETROMINO` : `${(state.puyo?.active?.colors || []).join(" + ")} PAIR`;
     $("#currentPieceName").textContent = pieceName;
+    if(!isTetris && state.mode === "play" && state.completed) {
+      $("#coachState").textContent="BOARD FULL";
+      $("#instructionKicker").textContent="FREE PLAY FINISHED";
+      $("#instructionTitle").textContent="The spawn area is blocked";
+      $("#instructionText").textContent="Undo the last pair or restart to build another chain.";
+      $("#placementText").textContent="No room for the next pair";
+      $("#whyText").textContent="Keep space below the spawn area as you extend your chain.";
+      return;
+    }
     if (state.completed) {
       $("#coachState").textContent = "COMPLETE";
       $("#coachState").style.color = "#63e59b";
@@ -532,7 +590,7 @@
 
   function updateUI() {
     updateLessonCard(); updateCoach();
-    const total = state.game === "tetris" ? activeLesson().sequence.length : activeLesson().colors.length/2;
+    const total = state.game === "tetris" ? activeLesson().sequence.length : activeLesson().moves.length;
     $("#stepCounter").textContent = state.completed ? "COMPLETE" : state.mode === "lesson" ? `STEP ${Math.min(state.step+1,total)} / ${total}` : "SCORE ATTACK";
     $("#modeStatus").textContent = state.completed ? "LESSON FINISHED" : state.mode === "lesson" ? "GUIDED OPENER" : "FREE PLAY";
     $("#speedLabel").textContent = state.speed === 0 ? "No automatic fall" : state.speed === 1 ? "Regular fall speed" : `${state.speed}× thinking time`;
@@ -556,14 +614,21 @@
     // Pausing freezes play without covering or softening the board. The header
     // button is the only pause-state indicator; the overlay is reserved for a
     // completed lesson.
-    const overlayVisible = state.completed;
+    const overlayVisible = state.completed && !isDrill();
     $("#pauseOverlay").classList.toggle("visible",overlayVisible);
     $("#pauseOverlay").setAttribute("aria-hidden",String(!overlayVisible));
     $("#overlayTitle").textContent = "LESSON COMPLETE";
     $("#overlayText").textContent = `${activeLesson().name} sequence finished`;
     $("#overlayKey").textContent = "RESTART TO PRACTISE AGAIN";
+    if(state.game === "puyo" && state.mode === "play" && state.completed) {
+      $("#overlayTitle").textContent="BOARD FULL";
+      $("#overlayText").textContent="Undo or restart free play";
+      $("#modeStatus").textContent="FREE PLAY FINISHED";
+      $("#stepCounter").textContent="BOARD FULL";
+    }
     $("#pauseButton").disabled = state.completed;
     $("#pauseButton").firstChild.textContent = state.paused ? "▶" : "Ⅱ";
+    updateDrillUI();
   }
 
   function displayKey(key) {
@@ -688,7 +753,13 @@
 
   function drawPuyo() {
     const p=state.puyo, cell=60; drawBoardBackground(6,12,cell);
-    for(let y=1;y<13;y++)for(let x=0;x<6;x++)if(p.board[y][x])drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.46,PUYO_COLORS[p.board[y][x]]);
+    const replay=p.replay && p.replay[p.replayIndex];
+    const shown=replay ? replay.board : p.board;
+    for(let y=1;y<13;y++)for(let x=0;x<6;x++)if(shown[y][x])drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.46,PUYO_COLORS[shown[y][x]]);
+    if(replay && replay.cleared) for(const [x,y] of replay.cleared) {
+      ctx.strokeStyle="#fff";ctx.lineWidth=4;ctx.beginPath();ctx.arc(x*cell+30,(y-1)*cell+30,26,0,Math.PI*2);ctx.stroke();
+    }
+    if(!p.active) { drawMiniPuyo(holdCtx,null,100,86);drawPuyoQueue();drawMiniPuyo(coachCtx,null,76,58);return; }
     const currentGhostY=puyoGhost(p.active);
     const currentGhost={...p.active,y:currentGhostY};
     puyoCells(currentGhost).forEach(([x,y,c])=>{if(y>=1)drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.45,PUYO_COLORS[c],.38,true);});
@@ -755,7 +826,7 @@
     if(state.paused)return;
     if(action==="hint"){
       if(state.mode === "play"){showToast("Free Play uses only the landing ghost");return;}
-      state.showHint=!state.showHint;updateUI();showToast(state.showHint?"Guide target shown":"Guide target hidden");return;
+      state.showHint=!state.showHint;if(isDrill()&&state.showHint)drillAssisted=true;updateUI();showToast(state.showHint?"Guide target shown":"Guide target hidden");return;
     }
     if(action==="undo"){undo();return;}
     if(state.game==="tetris"){
@@ -786,6 +857,7 @@
   document.addEventListener("keydown",event=>{
     if(listeningAction){event.preventDefault();state.keys[listeningAction]=event.key.length===1?event.key.toLowerCase():event.key;localStorage.setItem("stackLabKeys",JSON.stringify(state.keys));listeningAction=null;buildKeyGrid();updateUI();return;}
     if($("#settingsDialog").open)return;
+    if(event.target?.matches("select, input, textarea"))return;
     const action=Object.keys(state.keys).find(key=>state.keys[key].toLowerCase()===event.key.toLowerCase());
     if(action){
       event.preventDefault();
@@ -812,6 +884,17 @@
   $("#pauseButton").addEventListener("click",togglePause);
   $("#hintButton").addEventListener("click",()=>handleAction("hint"));
   $("#undoButton").addEventListener("click",undo);
+
+  $("#drillStyle").addEventListener("change",resetGame);
+  $("#mirrorDrill").addEventListener("change",resetGame);
+  $("#varyDrill").addEventListener("click",()=>{
+    const next=shuffle(Object.keys(PUYO_COLORS));
+    if(next.join("")===drillPermutation.join(""))next.push(next.shift());
+    drillPermutation=next;resetGame();
+  });
+  $("#replayPrev").addEventListener("click",()=>{state.puyo.replayIndex--;updateDrillUI();});
+  $("#replayNext").addEventListener("click",()=>{state.puyo.replayIndex++;updateDrillUI();});
+  $("#nextDrill").addEventListener("click",()=>{state.lessonIndex=(state.lessonIndex+1)%lessons.puyo.length;$("#lessonPicker").value=state.lessonIndex;resetGame();});
 
   populateLessons(); buildKeyGrid(); resetGame(); requestAnimationFrame(tick); canvas.focus();
 })();

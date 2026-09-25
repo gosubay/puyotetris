@@ -8,7 +8,7 @@
     <title>Stack Lab — Tetris & Puyo Trainer</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308141f'/%3E%3Cpath d='M12 16h16v16H12zm16 16h16v16H28zm16-16h8v16h-8z' fill='%234fe0ff'/%3E%3Ccircle cx='18' cy='47' r='8' fill='%23ff4d7d'/%3E%3C/svg%3E" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <link rel="stylesheet" href="./styles.css?v=20260924-2" />
+    <link rel="stylesheet" href="./styles.css?v=20260924-4" />
   </head>
   <body>
     <div class="app-shell">
@@ -52,9 +52,18 @@
             </div>
             <p id="lessonDescription">Build a clean T-Spin Double while keeping a flat continuation.</p>
             <div class="condition-box">
-              <span>START WHEN</span>
+              <span id="conditionLabel">START WHEN</span>
               <strong id="lessonCondition">I arrives in the first five pieces</strong>
             </div>
+          </section>
+
+          <section id="drillControls" class="drill-controls" hidden aria-label="Puyo drill options">
+            <label for="drillStyle">PRACTICE</label>
+            <select id="drillStyle"><option value="guided">Learn · guided placements</option><option value="recall">Recall · hints on request</option></select>
+            <label class="mirror-option"><input id="mirrorDrill" type="checkbox" /> Mirror the board</label>
+            <button id="varyDrill" type="button">↻ New colours</button>
+            <p id="drillProgress" role="status" aria-live="polite"></p>
+            <p class="drill-note">Fixed teaching sequences. These drills do not cover every random opening.</p>
           </section>
 
           <div class="speed-card">
@@ -140,6 +149,13 @@
           </section>
 
           <div class="coach-tip"><kbd>H</kbd><span>Show or hide the recommended placement at any time.</span></div>
+          <section class="drill-review" id="drillReview" hidden aria-label="Chain replay">
+            <strong id="drillResult" role="status" aria-live="polite"></strong>
+            <p id="replayText" aria-live="polite"></p>
+            <div class="replay-actions"><button id="replayPrev" type="button">← Back</button><button id="replayNext" type="button">Next →</button></div>
+            <button id="nextDrill" type="button">Next drill</button>
+          </section>
+          <a id="drillSource" class="drill-source" hidden target="_blank" rel="noopener noreferrer">Formation reference ↗</a>
         </aside>
       </main>
     </div>
@@ -161,7 +177,8 @@
 
     <script src="./tetris-rules.js?v=20260924-2"></script>
     <script src="./opener-data.js?v=20260924-3"></script>
-    <script src="./lessons.js?v=20260924-3"></script>
-    <script src="./app.js?v=20260924-3"></script>
+    <script src="./puyo-drills.js?v=20260924-4"></script>
+    <script src="./lessons.js?v=20260924-4"></script>
+    <script src="./app.js?v=20260924-4"></script>
   </body>
 </html>
