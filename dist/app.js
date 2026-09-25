@@ -529,6 +529,15 @@
     const isTetris = state.game === "tetris";
     const pieceName = isTetris ? `${state.tetris?.active?.type || "—"} TETROMINO` : `${(state.puyo?.active?.colors || []).join(" + ")} PAIR`;
     $("#currentPieceName").textContent = pieceName;
+    if(!isTetris && state.mode === "play" && state.completed) {
+      $("#coachState").textContent="BOARD FULL";
+      $("#instructionKicker").textContent="FREE PLAY FINISHED";
+      $("#instructionTitle").textContent="The spawn area is blocked";
+      $("#instructionText").textContent="Undo the last pair or restart to build another chain.";
+      $("#placementText").textContent="No room for the next pair";
+      $("#whyText").textContent="Keep space below the spawn area as you extend your chain.";
+      return;
+    }
     if (state.completed) {
       $("#coachState").textContent = "COMPLETE";
       $("#coachState").style.color = "#63e59b";
@@ -611,6 +620,12 @@
     $("#overlayTitle").textContent = "LESSON COMPLETE";
     $("#overlayText").textContent = `${activeLesson().name} sequence finished`;
     $("#overlayKey").textContent = "RESTART TO PRACTISE AGAIN";
+    if(state.game === "puyo" && state.mode === "play" && state.completed) {
+      $("#overlayTitle").textContent="BOARD FULL";
+      $("#overlayText").textContent="Undo or restart free play";
+      $("#modeStatus").textContent="FREE PLAY FINISHED";
+      $("#stepCounter").textContent="BOARD FULL";
+    }
     $("#pauseButton").disabled = state.completed;
     $("#pauseButton").firstChild.textContent = state.paused ? "▶" : "Ⅱ";
     updateDrillUI();
