@@ -1,0 +1,68 @@
+[
+  {
+    "seed": 0,
+    "rng": 458884823,
+    "palette": "RBPYG",
+    "hashes": {
+      "3": "7939c8805e1a7934ce557baaa0320c75c281997c2f8f444b8aa4f706842ca1e7",
+      "4": "67738fdcf4c5bbc7a0d1e26e184d00ac5b4c0b4f1e7f43ee08484e88eec83a04",
+      "5": "df0ef31bd22fef1fab4124f8cbf0c56318645ba639ee794c7c86e738e5010c2d"
+    },
+    "prefix": "RRPRPYPYRBBBPBBPRRRYBBYPPBYYRPPY"
+  },
+  {
+    "seed": 1,
+    "rng": 1393844780,
+    "palette": "GPRBY",
+    "hashes": {
+      "3": "b650695ccd4cfec0af364bc06a2741365ed95c1ab22502b84891aac6875ea175",
+      "4": "83253391d5bf9832512e593c12e045eed41159623c82a501ae3a9e0bb0e16be6",
+      "5": "e7f12674285a5d067daa9701c312568da93c6aabf2795c8a591a2b6e46f332f4"
+    },
+    "prefix": "GPRPPPRBBPGBRRRRPPRPGBBBPGBBPRRB"
+  },
+  {
+    "seed": 42,
+    "rng": 1072497353,
+    "palette": "GPYRB",
+    "hashes": {
+      "3": "06d70ab4a22b697999443a6fba221cc2dba134a6c204820462b814ccf3a0aa01",
+      "4": "44a99c32cb712524ed515012053b684c1d1097c0b15c07a82a3b866b62ed60fa",
+      "5": "2960b673270a4637fb1c017f1a1a91033f5381b8755cc66956d236fc7fd6bbca"
+    },
+    "prefix": "PPGGRYRRRYYGRGRRRGGRPRGYYGRGPYGP"
+  },
+  {
+    "seed": 4660,
+    "rng": 2275446299,
+    "palette": "RGBPY",
+    "hashes": {
+      "3": "c419888af6284d4d6d5a33fb5b8a31bf783449e776f9b3b0657413d2b070855d",
+      "4": "7fab52ffd0029ea0aee4f11b16737c9de48ef65c48c61c3a1f1441bf31522c08",
+      "5": "8b3c068ad0384d2e5a2401c138e801026383bd96be70935d8bf1ecf0a8a241e7"
+    },
+    "prefix": "RGRRGRBBGRGPBRBRGPRBBBPBBPBRPPPG"
+  },
+  {
+    "seed": 34066,
+    "rng": 3622280145,
+    "palette": "BPYGR",
+    "hashes": {
+      "3": "3cb19ce7fd3f4aa259eb1607997d4eb1bbf02a34c53e8ed61eae9cbb9a290e38",
+      "4": "d35bf73a077344043a08b50210c22ab9831e30f92475fc808c0fe6ac02bfd88d",
+      "5": "ef854ba9629d37d4e03722cbee84c6bf9d7fc6c83deb42207c8d894cb5330b06"
+    },
+    "prefix": "BPBPBPYPGYBGBPBBPYBYYGBYGPGYBGYG"
+  },
+  {
+    "seed": 65535,
+    "rng": 1056222082,
+    "palette": "RPYGB",
+    "hashes": {
+      "3": "edc413b34d05222d9845dbd63115c179a58e11473622ffb1569e6610e6953737",
+      "4": "dc1b2de7e6ea8a2ec17b9c24dd8a0afc7f34199471385f9089fe6b6bdb2a2162",
+      "5": "0962a7de7980b476d0d90c4abeb9f02dc1a3abab757585c78331ec40de112b2b"
+    },
+    "prefix": "RYYYRPPGRRPGGRPRRPYGPPYGYGYRRRRG"
+  }
+]
