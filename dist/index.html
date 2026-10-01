@@ -8,7 +8,7 @@
     <title>Stack Lab — Tetris & Puyo Trainer</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308141f'/%3E%3Cpath d='M12 16h16v16H12zm16 16h16v16H28zm16-16h8v16h-8z' fill='%234fe0ff'/%3E%3Ccircle cx='18' cy='47' r='8' fill='%23ff4d7d'/%3E%3C/svg%3E" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <link rel="stylesheet" href="./styles.css?v=20261001-1" />
+    <link rel="stylesheet" href="./styles.css?v=20261001-2" />
   </head>
   <body>
     <div class="app-shell">
@@ -37,6 +37,7 @@
           <div class="segmented" role="group" aria-label="Training mode">
             <button class="mode-button active" type="button" data-mode="lesson">Opener</button>
             <button class="mode-button" type="button" data-mode="play">Free play</button>
+            <button class="mode-button" type="button" data-mode="freeze" hidden>Freeze</button>
           </div>
 
           <div class="field-group lesson-picker-wrap">
@@ -71,11 +72,12 @@
           </div>
 
           <section id="puyoSetup" hidden aria-label="Puyo sequence">
-            <p><strong>Unlimited thinking time</strong><br>20th Anniversary sequence</p>
+            <p><strong>Four colors per game</strong><br>20th Anniversary sequence</p>
             <label for="seedInput">Seed (0–65535)</label>
             <div class="seed-row"><input id="seedInput" inputmode="numeric" value="0"><button id="applySeed" type="button">Apply</button></div>
             <p id="seedError" role="status"></p>
             <button id="newSequence" type="button" class="restart-button">New sequence</button>
+            <p>Restart or switch mode to repeat this seed.</p>
           </section>
           <section class="score-card" id="scoreCard" hidden aria-label="Free play score">
             <div><span>SCORE</span><strong id="scoreValue">0</strong></div>
@@ -102,7 +104,6 @@
             </div>
 
             <div class="canvas-wrap">
-              <div id="waitingPair" hidden role="img"><span>WAITING PAIR</span><canvas id="waitingCanvas" width="360" height="110" aria-hidden="true"></canvas></div>
               <canvas id="gameCanvas" width="360" height="720" aria-label="Playable training board" tabindex="0"></canvas>
               <div class="pause-overlay" id="pauseOverlay" aria-hidden="true">
                 <strong id="overlayTitle">PAUSED</strong>
@@ -121,6 +122,14 @@
           <div class="board-actions">
             <button class="hint-button" id="hintButton" type="button"><span>◇</span> <span id="hintButtonLabel">Show guide</span> <kbd>H</kbd></button>
             <button class="undo-button" id="undoButton" type="button" disabled>↶ Undo <kbd>BACKSPACE</kbd></button>
+          </div>
+          <div id="puyoControls" hidden role="group" aria-label="Puyo controls">
+            <button type="button" data-puyo-action="left" aria-label="Move left">←<span>Left</span></button>
+            <button type="button" data-puyo-action="rotateCCW" aria-label="Rotate counter-clockwise">↶<span>Rotate</span></button>
+            <button type="button" data-puyo-action="rotateCW" aria-label="Rotate clockwise">↷<span>Rotate</span></button>
+            <button type="button" data-puyo-action="right" aria-label="Move right">→<span>Right</span></button>
+            <button id="puyoDown" type="button" data-puyo-action="softDrop" aria-label="Down: soft drop (hold to repeat)">↓<span id="puyoDownLabel">Soft drop</span></button>
+            <button type="button" data-puyo-action="hardDrop" aria-label="Up: hard drop once">↑<span>Hard drop</span></button>
           </div>
         </section>
 
@@ -174,6 +183,6 @@
     <script src="./puyo-rules.js?v=20261001-1"></script>
     <script src="./puyo-randomizer.js?v=20261001-1"></script>
     <script src="./puyo-patterns.js?v=20261001-1"></script>
-    <script src="./app.js?v=20261001-1"></script>
+    <script src="./app.js?v=20261001-2"></script>
   </body>
 </html>

@@ -20,7 +20,10 @@
   const { BASE_SHAPES, shape, kicksFor, samePlacement, classifyTSpin, guidelineScore } = window.StackLabTetrisRules;
   const puyoRules = window.StackLabPuyoRules;
   const puyoRandomizer = window.StackLabPuyoRandomizer;
-  const isPuyoPlanning = () => state.game === "puyo" && state.mode === "play";
+  const isPuyoFreePlay = () => state.game === "puyo" && state.mode === "play";
+  const isPuyoFreeze = () => state.game === "puyo" && state.mode === "freeze";
+  const isPuyoPractice = () => isPuyoFreePlay() || isPuyoFreeze();
+  const puyoView = () => ({ firstRow: isPuyoFreeze() ? 0 : 1, rows: isPuyoFreeze() ? 13 : 12 });
   const verifiedOpeners = window.StackLabOpeners;
 
   const PUYO_PLANS = {
@@ -298,7 +301,7 @@
       for (let i = 0; i < colors.length; i += 2) pairs.push([colors[i], colors[i+1]]);
     }
     const seed = state.puyo?.seed ?? newPuyoSeed();
-    const generator = state.mode === "play" ? puyoRandomizer.create(seed) : null;
+    const generator = isPuyoPractice() ? puyoRandomizer.create(seed) : null;
     state.puyo = { board: emptyBoard(6,13), queue: pairs, active: null, chains: 0, lockMs: 0,
       seed, generator, phase: "planning" };
     spawnPuyo();
@@ -413,16 +416,23 @@
     if (!state.undo || state.undo.game !== state.game) return;
     state.mode = state.undo.mode; state.lessonIndex = state.undo.lessonIndex; state.step = state.undo.step;
     state.tetris = state.undo.tetris; state.puyo = state.undo.puyo; state.undo = null; state.warning = ""; state.completed = false; state.paused = false;
+    // Give an automatically locked pair a fresh lock window after Undo.
+    if (isPuyoFreePlay()) state.puyo.lockMs = 0;
     $("#undoButton").disabled = true;
     clearInput();
     showToast("Move undone"); updateUI(); updateCoach();
   }
 
-  function clearInput() { state.heldActions.clear(); state.fallAccumulator = 0; state.softDropAccumulator = 0; }
+  const pointerInputs = new Map();
+  function clearInput() {
+    for (const input of pointerInputs.values()) clearInterval(input.timer);
+    pointerInputs.clear();
+    state.heldActions.clear(); state.fallAccumulator = 0; state.softDropAccumulator = 0;
+  }
 
   function resetGame() {
     clearTimeout(toastTimer); $("#toast").classList.remove("visible");
-    state.step = 0; state.undo = null; state.warning = ""; state.paused = false; state.completed = false; state.fallAccumulator = 0; state.softDropAccumulator = 0; state.heldActions.clear();
+    state.step = 0; state.undo = null; state.warning = ""; state.paused = false; state.completed = false; clearInput();
     $("#undoButton").disabled = true;
     if (state.game === "tetris") initTetris(); else initPuyo();
     updateUI();
@@ -431,11 +441,13 @@
   function setGame(game) {
     if (state.game === game) return;
     state.game = game; state.lessonIndex = 0;
+    if (game === "tetris" && state.mode === "freeze") state.mode = "play";
     $$(".game-tab").forEach(b => { const active = b.dataset.game === game; b.classList.toggle("active",active); b.setAttribute("aria-selected",active); });
     populateLessons(); resetGame();
   }
 
   function setMode(mode) {
+    if (mode === "freeze" && state.game !== "puyo") return;
     state.mode = mode;
     state.showHint = mode === "lesson";
     $$(".mode-button").forEach(b => b.classList.toggle("active",b.dataset.mode === mode));
@@ -470,20 +482,22 @@
     const lesson = activeLesson();
     if (state.game === "puyo" && state.puyo?.phase === "topped-out") {
       $("#coachState").textContent = "SPAWN BLOCKED";
-      $("#instructionKicker").textContent = state.mode === "play" ? "FREE PLAY" : "GUIDED OPENER";
+      $("#instructionKicker").textContent = isPuyoFreeze() ? "FREEZE MODE" : state.mode === "play" ? "FREE PLAY" : "GUIDED OPENER";
       $("#instructionTitle").textContent = "Undo or restart to continue";
       $("#instructionText").textContent = "The next pair cannot enter the occupied spawn cells. Undo the last placement or restart this exercise.";
       $("#currentPieceName").textContent = "—";
       $("#placementText").textContent = "Board preserved";
       return;
     }
-    if (isPuyoPlanning()) {
-      $("#coachState").textContent = state.puyo?.phase === "topped-out" ? "SPAWN BLOCKED" : "PLANNING";
+    if (isPuyoPractice()) {
+      $("#coachState").textContent = isPuyoFreeze() ? "PLANNING" : "PLAYING";
       $("#currentPieceName").textContent = (state.puyo?.active?.colors || []).join(" + ") || "—";
-      $("#instructionKicker").textContent = "UNLIMITED THINKING TIME";
+      $("#instructionKicker").textContent = isPuyoFreeze() ? "UNLIMITED THINKING TIME" : "REGULAR 1× FALL SPEED";
       $("#instructionTitle").textContent = state.puyo?.phase === "topped-out" ? "Undo or restart to continue" : "Choose your placement";
-      $("#instructionText").textContent = `Move and rotate, then press ${displayKey(state.keys.hardDrop)} to drop. Soft drop is disabled. Click the board to return keyboard focus after using controls.`;
-      $("#placementText").textContent = "Ghost = landing · waiting pair shown above";
+      $("#instructionText").textContent = isPuyoFreeze()
+        ? `Move and rotate at your own pace. Press ${displayKey(state.keys.softDrop)} or ${displayKey(state.keys.hardDrop)} to hard drop once. The shaded top row shows the spawn pair. Click the board to resume keyboard play.`
+        : `Pairs fall automatically at 1×. Hold ${displayKey(state.keys.softDrop)} to soft drop; press ${displayKey(state.keys.hardDrop)} to hard drop. Click the board to resume keyboard play.`;
+      $("#placementText").textContent = "Ghost = landing · four colors per seeded game";
       return;
     }
     const isTetris = state.game === "tetris";
@@ -541,27 +555,39 @@
 
   function updateUI() {
     updateLessonCard(); updateCoach();
-    const deliberate = isPuyoPlanning();
+    const deliberate = isPuyoPractice();
+    $$('.mode-button').forEach(b => {
+      b.hidden = b.dataset.mode === "freeze" && state.game !== "puyo";
+      b.classList.toggle("active", b.dataset.mode === state.mode);
+    });
+    $(".lesson-picker-wrap").hidden = state.mode !== "lesson";
+    $(".lesson-card").hidden = state.mode !== "lesson";
+    $("#lessonPicker").disabled = state.mode !== "lesson";
+    const height = state.game === "puyo" ? puyoView().rows * 60 : 720;
+    if (canvas.height !== height) canvas.height = height;
+    canvas.setAttribute("aria-label", isPuyoFreeze() ? "Puyo Freeze board, 6 columns and 13 visible rows including spawn row" : "Playable training board");
+    $("#puyoControls").hidden = state.game !== "puyo";
+    $("#puyoDown").setAttribute("aria-label", isPuyoFreeze() ? "Down: hard drop once" : "Down: soft drop (hold to repeat)");
+    $("#puyoDownLabel").textContent = isPuyoFreeze() ? "Hard drop" : "Soft drop";
     $(".speed-card").hidden = deliberate;
     $("#puyoSetup").hidden = !deliberate;
     $("#puyoReferences").hidden = !deliberate;
     $(".why-card").hidden = deliberate;
     $(".coach-panel").classList.toggle("puyo-free",deliberate);
     $(".trainer-layout").classList.toggle("puyo-free-play",deliberate);
-    $("#waitingPair").hidden = !deliberate;
     if (deliberate) $("#seedInput").value = state.puyo.seed;
     const total = state.game === "tetris" ? activeLesson().sequence.length : activeLesson().colors.length/2;
-    $("#stepCounter").textContent = state.completed ? "COMPLETE" : state.mode === "lesson" ? `STEP ${Math.min(state.step+1,total)} / ${total}` : isPuyoPlanning() ? (state.puyo.phase === "topped-out" ? "SPAWN BLOCKED" : `BEST ${state.puyo.chains}-CHAIN`) : "SCORE ATTACK";
-    $("#modeStatus").textContent = state.completed ? "LESSON FINISHED" : state.mode === "lesson" ? "GUIDED OPENER" : "FREE PLAY";
+    $("#stepCounter").textContent = state.completed ? "COMPLETE" : state.mode === "lesson" ? `STEP ${Math.min(state.step+1,total)} / ${total}` : deliberate ? (state.puyo.phase === "topped-out" ? "SPAWN BLOCKED" : `BEST ${state.puyo.chains}-CHAIN`) : "SCORE ATTACK";
+    $("#modeStatus").textContent = state.completed ? "LESSON FINISHED" : state.mode === "lesson" ? "GUIDED OPENER" : isPuyoFreeze() ? "FREEZE MODE · NO AUTO FALL" : isPuyoFreePlay() ? "FREE PLAY · 1×" : "FREE PLAY";
     $("#speedLabel").textContent = state.speed === 0 ? "No automatic fall" : state.speed === 1 ? "Regular fall speed" : `${state.speed}× thinking time`;
-    $("#restartButton").textContent = state.mode === "play" ? "↻ Restart free play" : "↻ Restart lesson";
+    $("#restartButton").textContent = isPuyoFreeze() ? "↻ Restart freeze mode" : state.mode === "play" ? "↻ Restart free play" : "↻ Restart lesson";
     $("#holdKey").textContent = displayKey(state.keys.hold);
     $("#hintButton").classList.toggle("active",state.showHint);
     $("#hintButtonLabel").textContent = state.showHint ? "Hide guide" : "Show guide";
-    $("#hintButton").disabled = state.mode === "play";
-    $("#hintButton").hidden = state.mode === "play";
-    $(".coach-tip").hidden = state.mode === "play";
-    $("#hintButton").title = state.mode === "play" ? "Free Play uses only the normal landing ghost" : "Show or hide the lesson target";
+    $("#hintButton").disabled = state.mode !== "lesson";
+    $("#hintButton").hidden = state.mode !== "lesson";
+    $(".coach-tip").hidden = state.mode !== "lesson";
+    $("#hintButton").title = state.mode !== "lesson" ? "Practice uses only the normal landing ghost" : "Show or hide the lesson target";
     const showScore = state.mode === "play" && state.game === "tetris";
     $("#scoreCard").hidden = !showScore;
     if (showScore && state.tetris) {
@@ -705,32 +731,22 @@
   }
 
   function drawPuyo() {
-    const p=state.puyo, cell=60; drawBoardBackground(6,12,cell);
-    for(let y=1;y<13;y++)for(let x=0;x<6;x++)if(p.board[y][x])drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.46,PUYO_COLORS[p.board[y][x]]);
+    const p=state.puyo, cell=60, {firstRow,rows}=puyoView(); drawBoardBackground(6,rows,cell);
+    if (firstRow === 0) {
+      ctx.fillStyle = "rgba(79,224,255,.10)"; ctx.fillRect(0,0,6*cell,cell);
+      ctx.fillStyle = "#91b5c8"; ctx.font = "10px sans-serif"; ctx.fillText("SPAWN",6,13);
+    }
+    const cy = y => (y-firstRow)*cell+cell/2;
+    for(let y=firstRow;y<13;y++)for(let x=0;x<6;x++)if(p.board[y][x])drawPuyoCircle(ctx,x*cell+cell/2,cy(y),cell*.46,PUYO_COLORS[p.board[y][x]]);
     drawMiniPuyo(holdCtx,null,100,86);
     drawPuyoQueue(); drawMiniPuyo(coachCtx,p.active?.colors,76,58);
-    drawWaitingPair();
     if (!p.active) return;
     const currentGhostY=puyoGhost(p.active);
     const currentGhost={...p.active,y:currentGhostY};
-    puyoCells(currentGhost).forEach(([x,y,c])=>{if(y>=1)drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.45,PUYO_COLORS[c],.38,true);});
+    puyoCells(currentGhost).forEach(([x,y,c])=>{if(y>=firstRow)drawPuyoCircle(ctx,x*cell+cell/2,cy(y),cell*.45,PUYO_COLORS[c],.38,true);});
     const hint=state.mode==="lesson"?lessonPuyoTarget():null;
-    if(state.showHint&&hint){const probe={...p.active,x:hint.x,y:hint.y,rotation:hint.rotation};puyoCells(probe).forEach(([x,y,c])=>{if(y>=1)drawPuyoGuideCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.45,PUYO_COLORS[c]);});}
-    puyoCells(p.active).forEach(([x,y,c])=>{if(y>=1)drawPuyoCircle(ctx,x*cell+cell/2,(y-1)*cell+cell/2,cell*.46,PUYO_COLORS[c]);});
-  }
-
-  function drawWaitingPair() {
-    const active = state.puyo.active;
-    const panel = $("#waitingPair");
-    panel.setAttribute("aria-label",active ? `Waiting pair: pivot ${active.colors[0]}, satellite ${active.colors[1]}, column ${active.x+1}, rotation ${active.rotation}` : "Spawn blocked");
-    const context = $("#waitingCanvas").getContext("2d");
-    context.clearRect(0,0,360,110);
-    if (!active) return;
-    for (const [x,y,color] of puyoCells({...active,y:0})) {
-      drawPuyoCircle(context,x*60+30,55+y*30,14,PUYO_COLORS[color]);
-      context.fillStyle = "#06111a"; context.font = "bold 12px sans-serif";
-      context.textAlign = "center"; context.fillText(color,x*60+30,59+y*30);
-    }
+    if(state.showHint&&hint){const probe={...p.active,x:hint.x,y:hint.y,rotation:hint.rotation};puyoCells(probe).forEach(([x,y,c])=>{if(y>=firstRow)drawPuyoGuideCircle(ctx,x*cell+cell/2,cy(y),cell*.45,PUYO_COLORS[c]);});}
+    puyoCells(p.active).forEach(([x,y,c])=>{if(y>=firstRow)drawPuyoCircle(ctx,x*cell+cell/2,cy(y),cell*.46,PUYO_COLORS[c]);});
   }
 
   function drawMiniPuyo(context,pair,w,h) {
@@ -744,7 +760,7 @@
 
   function draw() { if(state.game==="tetris"&&state.tetris)drawTetris(); else if(state.puyo)drawPuyo(); }
 
-  function gravityInterval() { return state.speed===0 ? Infinity : state.speed===1 ? 200 : state.speed===10 ? 2000 : 1000; }
+  function gravityInterval() { return isPuyoFreeze() ? Infinity : isPuyoFreePlay() ? 200 : state.speed===0 ? Infinity : state.speed===1 ? 200 : state.speed===10 ? 2000 : 1000; }
 
   const SOFT_DROP_INTERVAL = 45;
   const LOCK_DELAY = 500;
@@ -752,7 +768,7 @@
   function tick(timestamp) {
     const delta=Math.min(50,timestamp-state.lastTime||0); state.lastTime=timestamp;
     if(!state.paused&&!state.completed && (state.game === "tetris" || state.puyo.active)){
-      if(!isPuyoPlanning() && state.heldActions.has("softDrop")){
+      if(!isPuyoFreeze() && state.heldActions.has("softDrop")){
         state.softDropAccumulator+=delta;
         while(state.softDropAccumulator>=SOFT_DROP_INTERVAL){
           state.softDropAccumulator-=SOFT_DROP_INTERVAL;
@@ -760,7 +776,7 @@
         }
       }else state.softDropAccumulator=0;
 
-      if(state.speed!==0 && !isPuyoPlanning()){
+      if(Number.isFinite(gravityInterval())){
         state.fallAccumulator+=delta;
         if(state.fallAccumulator>=gravityInterval()){
           state.fallAccumulator-=gravityInterval();
@@ -788,7 +804,7 @@
     if(action==="pause"){togglePause();return;}
     if(state.paused)return;
     if(action==="hint"){
-      if(state.mode === "play"){showToast("Free Play uses only the landing ghost");return;}
+      if(state.mode !== "lesson"){showToast("Practice uses only the landing ghost");return;}
       state.showHint=!state.showHint;updateUI();showToast(state.showHint?"Guide target shown":"Guide target hidden");return;
     }
     if(action==="undo"){undo();return;}
@@ -797,13 +813,15 @@
       if(action==="hardDrop")hardDropTetris();if(action==="rotateCCW")rotateTetris(-1);if(action==="rotateCW")rotateTetris(1);if(action==="hold")holdTetris();
     } else {
       if (!state.puyo.active || state.puyo.phase !== "planning") return;
-      if(action==="left")movePuyo(-1,0);if(action==="right")movePuyo(1,0);if(action==="softDrop" && !isPuyoPlanning())movePuyo(0,1);
+      if(action==="left")movePuyo(-1,0);if(action==="right")movePuyo(1,0);
+      if(action==="softDrop"){if(isPuyoFreeze())hardDropPuyo();else movePuyo(0,1);}
       if(action==="hardDrop")hardDropPuyo();if(action==="rotateCCW")rotatePuyo(-1);if(action==="rotateCW")rotatePuyo(1);
     }
   }
 
   function togglePause() {
     if(state.completed)return;
+    if (state.game === "puyo") clearInput();
     state.paused=!state.paused; updateUI();
   }
 
@@ -813,7 +831,8 @@
   function buildKeyGrid() {
     const grid=$("#keyGrid");grid.innerHTML="";
     Object.keys(ACTION_LABELS).forEach(action=>{
-      const row=document.createElement("div");row.className="key-row";row.innerHTML=`<span>${ACTION_LABELS[action]}</span><button type="button" data-action="${action}">${displayKey(state.keys[action])}</button>`;grid.append(row);
+      const label = action === "softDrop" && isPuyoFreeze() ? "Down action (hard drop in Freeze)" : ACTION_LABELS[action];
+      const row=document.createElement("div");row.className="key-row";row.innerHTML=`<span>${label}</span><button type="button" data-action="${action}">${displayKey(state.keys[action])}</button>`;grid.append(row);
     });
   }
 
@@ -837,6 +856,37 @@
   window.addEventListener("blur",clearInput);
   document.addEventListener("focusin",event => { if (event.target !== canvas) clearInput(); });
   document.addEventListener("visibilitychange",() => { if (document.hidden) clearInput(); });
+
+  $$('[data-puyo-action]').forEach(button => {
+    button.addEventListener("keydown",event => {
+      if (event.repeat && (event.key === "Enter" || event.key === " ")) event.preventDefault();
+    });
+    button.addEventListener("pointerdown", event => {
+      if (event.button !== 0 || state.game !== "puyo") return;
+      event.preventDefault(); canvas.focus();
+      const action = button.dataset.puyoAction;
+      if (state.heldActions.has(action)) return;
+      button.setPointerCapture(event.pointerId);
+      state.heldActions.add(action);
+      handleAction(action);
+      const timer = action === "left" || action === "right"
+        ? setInterval(() => handleAction(action), 120) : null;
+      pointerInputs.set(event.pointerId,{action,timer});
+    });
+    const release = event => {
+      const input = pointerInputs.get(event.pointerId);
+      if (!input) return;
+      clearInterval(input.timer); state.heldActions.delete(input.action);
+      pointerInputs.delete(event.pointerId);
+    };
+    button.addEventListener("pointerup",release);
+    button.addEventListener("pointercancel",release);
+    button.addEventListener("lostpointercapture",release);
+    // Pointer presses act on down; only keyboard/assistive clicks act on click.
+    button.addEventListener("click",event => {
+      if (event.detail === 0 && state.game === "puyo") handleAction(button.dataset.puyoAction);
+    });
+  });
 
   $("#keyGrid").addEventListener("click",event=>{const button=event.target.closest("button[data-action]");if(!button)return;listeningAction=button.dataset.action;button.textContent="Press a key…";button.classList.add("listening");});
   $("#settingsButton").addEventListener("click",()=>{$("#settingsDialog").showModal();buildKeyGrid();});
